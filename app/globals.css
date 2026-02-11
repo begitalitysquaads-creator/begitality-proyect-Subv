@@ -1,0 +1,19 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --begitality-primary: 37 99 235; /* blue-600 */
+  --begitality-muted: 248 250 252; /* slate-50 */
+}
+
+@layer base {
+  body {
+    @apply bg-[#F8FAFC] text-slate-900 antialiased selection:bg-blue-100;
+  }
+}
+
+/* Radix scrollbars */
+[data-radix-scroll-area-viewport] {
+  scrollbar-gutter: stable;
+}
