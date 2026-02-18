@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { CargarBasesConvocatoria } from "@/components/project/CargarBasesConvocatoria";
 import { SectionEditor } from "@/components/project/SectionEditor";
 import { ProjectStatusBar } from "@/components/project/ProjectStatusBar";
+import { AIChatPanel } from "@/components/project/AIChatPanel";
 
 export default async function ProjectWorkspacePage({
   params,
@@ -87,8 +88,8 @@ export default async function ProjectWorkspacePage({
             <h3 className="font-bold mb-3 text-lg">Asistente IA</h3>
             <p className="text-slate-400 text-sm leading-relaxed mb-4">
               Usa el botón <span className="text-violet-400 font-bold">"Redactar con IA"</span> en
-              cada sección para generar contenido automáticamente basado en
-              las bases de la convocatoria.
+              cada sección o abre el <span className="text-violet-400 font-bold">chat IA</span> para
+              resolver dudas sobre tu convocatoria.
             </p>
             <div className="space-y-3 text-sm">
               <div className="flex items-start gap-2">
@@ -105,7 +106,7 @@ export default async function ProjectWorkspacePage({
               </div>
               <div className="flex items-start gap-2">
                 <span className="text-emerald-400 mt-0.5">✓</span>
-                <span className="text-slate-300">Revisa, edita y marca como completada</span>
+                <span className="text-slate-300">Pregunta dudas en el chat IA</span>
               </div>
               <div className="flex items-start gap-2">
                 <span className="text-emerald-400 mt-0.5">✓</span>
@@ -150,6 +151,9 @@ export default async function ProjectWorkspacePage({
           )}
         </div>
       </div>
+
+      {/* Chat IA flotante */}
+      <AIChatPanel projectId={id} />
     </div>
   );
 }
