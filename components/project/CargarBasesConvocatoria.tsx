@@ -2,10 +2,8 @@
 
 import { useState, useCallback } from "react";
 import { Upload, FileText, Loader2, Trash2 } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 
-const BUCKET = "convocatoria-files";
 const MAX_SIZE_MB = 50;
 const ACCEPT = "application/pdf";
 
@@ -29,72 +27,96 @@ export function CargarBasesConvocatoria({
   const [dragging, setDragging] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const supabase = createClient();
-
-  const refreshFiles = useCallback(async () => {
-    const { data } = await supabase
-      .from("convocatoria_bases")
-      .select("id, name, file_path, file_size, created_at")
-      .eq("project_id", projectId)
-      .order("created_at", { ascending: false });
-    setFiles(data ?? []);
-  }, [projectId]);
-
   const handleUpload = useCallback(
     async (fileList: FileList | null) => {
       if (!fileList?.length) return;
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        setError("Sesión expirada. Vuelve a iniciar sesión.");
-        return;
-      }
       setError(null);
       setUploading(true);
-      const toUpload = Array.from(fileList).filter((f) => f.type === "application/pdf" && f.size <= MAX_SIZE_MB * 1024 * 1024);
-      const skipped = Array.from(fileList).length - toUpload.length;
-      if (skipped > 0) {
-        setError(`Se omitieron ${skipped} fichero(s) (solo PDF, máx. ${MAX_SIZE_MB} MB).`);
-      }
-      for (const file of toUpload) {
-        const path = `${user.id}/${projectId}/${crypto.randomUUID()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
-        const { error: uploadErr } = await supabase.storage.from(BUCKET).upload(path, file, {
-          cacheControl: "3600",
-          upsert: false,
-        });
-        if (uploadErr) {
-          setError(uploadErr.message);
+
+      try {
+        const allFiles = Array.from(fileList);
+        const toUpload = allFiles.filter(
+          (f) =>
+            (f.type === "application/pdf" || f.name.toLowerCase().endsWith(".pdf")) &&
+            f.size <= MAX_SIZE_MB * 1024 * 1024
+        );
+        const skipped = allFiles.length - toUpload.length;
+        if (skipped > 0) {
+          setError(`Se omitieron ${skipped} fichero(s) (solo PDF, máx. ${MAX_SIZE_MB} MB).`);
+        }
+
+        if (toUpload.length === 0) {
           setUploading(false);
           return;
         }
-        const { error: insertErr } = await supabase.from("convocatoria_bases").insert({
-          project_id: projectId,
-          name: file.name,
-          file_path: path,
-          file_size: file.size,
-        });
-        if (insertErr) {
-          setError(insertErr.message);
-          setUploading(false);
-          return;
+
+        const uploaded: BaseFile[] = [];
+
+        for (const file of toUpload) {
+          const formData = new FormData();
+          formData.append("file", file);
+
+          const res = await fetch(
+            `/api/projects/${projectId}/upload-convocatoria`,
+            {
+              method: "POST",
+              body: formData,
+            }
+          );
+
+          if (!res.ok) {
+            const errData = await res.json().catch(() => ({}));
+            setError(
+              errData.error || `Error subiendo "${file.name}" (${res.status})`
+            );
+            setUploading(false);
+            return;
+          }
+
+          const { file: insertedFile } = await res.json();
+          if (insertedFile) {
+            uploaded.push(insertedFile);
+          }
         }
+
+        // Actualizar lista: agregar los nuevos al inicio
+        setFiles((prev) => [...uploaded, ...prev]);
+      } catch (err) {
+        console.error("Unexpected upload error:", err);
+        setError(
+          `Error inesperado: ${err instanceof Error ? err.message : "Inténtalo de nuevo."}`
+        );
+      } finally {
+        setUploading(false);
       }
-      await refreshFiles();
-      setUploading(false);
     },
-    [projectId, supabase, refreshFiles]
+    [projectId]
   );
 
   const handleDelete = useCallback(
     async (id: string, filePath: string | null) => {
       setError(null);
-      if (filePath) {
-        await supabase.storage.from(BUCKET).remove([filePath]);
+      try {
+        const res = await fetch(
+          `/api/projects/${projectId}/upload-convocatoria`,
+          {
+            method: "DELETE",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ fileId: id, filePath }),
+          }
+        );
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          setError(errData.error || "Error al eliminar el archivo");
+          return;
+        }
+        setFiles((prev) => prev.filter((f) => f.id !== id));
+      } catch (err) {
+        console.error("Delete error:", err);
+        setError("Error inesperado al eliminar");
       }
-      const { error: deleteErr } = await supabase.from("convocatoria_bases").delete().eq("id", id);
-      if (deleteErr) setError(deleteErr.message);
-      else await refreshFiles();
     },
-    [supabase, refreshFiles]
+    [projectId]
   );
 
   const onDrop = useCallback(
