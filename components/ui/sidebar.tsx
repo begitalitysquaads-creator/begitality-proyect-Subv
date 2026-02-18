@@ -6,6 +6,7 @@ import {
   LayoutDashboard,
   FileText,
   Briefcase,
+  Users,
   Zap,
   LogOut,
 } from "lucide-react";
@@ -18,6 +19,7 @@ import * as ScrollArea from "@radix-ui/react-scroll-area";
 const navItems = [
   { href: "/dashboard", icon: LayoutDashboard, label: "Panel" },
   { href: "/dashboard/projects", icon: FileText, label: "Proyectos" },
+  { href: "/dashboard/clients", icon: Users, label: "Clientes" },
   { href: "/dashboard/history", icon: Briefcase, label: "Histórico" },
 ];
 

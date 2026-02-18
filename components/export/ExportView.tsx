@@ -73,6 +73,12 @@ export function ExportView({ project }: ExportViewProps) {
   const [isExporting, setIsExporting] = useState(false);
   const [exportComplete, setExportComplete] = useState(false);
 
+  const sections = project.sections ?? [];
+  const completedSections = sections.filter(s => s.is_completed).length;
+  const totalSections = sections.length;
+  const progressPercent = totalSections > 0 ? Math.round((completedSections / totalSections) * 100) : 0;
+  const hasContent = sections.some(s => s.content && s.content.trim().length > 0);
+
   const doExport = async (format: "pdf" | "docx") => {
     setIsExporting(true);
     try {
@@ -94,24 +100,22 @@ export function ExportView({ project }: ExportViewProps) {
       setExportComplete(true);
     } catch (e) {
       console.error(e);
+      alert(e instanceof Error ? e.message : "Error al exportar");
       setExportComplete(false);
     } finally {
       setIsExporting(false);
     }
   };
 
-  const handleExport = () => doExport("pdf");
   const handleExportDocx = () => doExport("docx");
   const handleExportPdf = () => doExport("pdf");
-
-  const sections = project.sections ?? [];
 
   return (
     <div className="max-w-5xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <header className="flex justify-between items-center">
         <div className="flex items-center gap-4">
           <Link
-            href="/dashboard"
+            href={`/dashboard/projects/${project.id}`}
             className="p-2 hover:bg-white rounded-full border border-slate-200 transition-all"
           >
             <ArrowLeft size={20} />
@@ -126,9 +130,15 @@ export function ExportView({ project }: ExportViewProps) {
           </div>
         </div>
         <div className="flex gap-3">
-          <span className="flex items-center gap-2 bg-emerald-50 text-emerald-600 px-4 py-2 rounded-xl text-xs font-bold border border-emerald-100">
-            <ShieldCheck size={16} /> Verificado por IA
-          </span>
+          {progressPercent === 100 ? (
+            <span className="flex items-center gap-2 bg-emerald-50 text-emerald-600 px-4 py-2 rounded-xl text-xs font-bold border border-emerald-100">
+              <ShieldCheck size={16} /> Verificado por IA
+            </span>
+          ) : (
+            <span className="flex items-center gap-2 bg-amber-50 text-amber-600 px-4 py-2 rounded-xl text-xs font-bold border border-amber-100">
+              <Loader2 size={16} className="animate-spin" /> {progressPercent}% Completado
+            </span>
+          )}
         </div>
       </header>
 
@@ -139,18 +149,14 @@ export function ExportView({ project }: ExportViewProps) {
               <div className="flex items-center gap-2">
                 <FileText size={18} className="text-slate-400" />
                 <span className="text-sm font-bold text-slate-700">
-                  MEMORIA_TECNICA_FINAL.PDF
+                  VISTA PREVIA DE MEMORIA
                 </span>
               </div>
               <div className="flex gap-2">
                 <button
                   type="button"
-                  className="p-2 hover:bg-white rounded-lg text-slate-400 hover:text-slate-600"
-                >
-                  <Eye size={18} />
-                </button>
-                <button
-                  type="button"
+                  title="Imprimir"
+                  onClick={() => window.print()}
                   className="p-2 hover:bg-white rounded-lg text-slate-400 hover:text-slate-600"
                 >
                   <Printer size={18} />
@@ -168,22 +174,27 @@ export function ExportView({ project }: ExportViewProps) {
                     {project.grant_name}
                   </p>
                 </div>
-                {sections.length > 0 ? (
+                {sections.length > 0 && hasContent ? (
                   sections.map((section) => (
                     <div key={section.id} className="space-y-4">
                       <h3 className="text-lg font-bold text-slate-900 font-sans border-l-4 border-blue-600 pl-4">
                         {section.title}
                       </h3>
-                      <p className="text-slate-700 leading-relaxed text-justify text-sm">
-                        {section.content}
-                      </p>
+                      <div className="text-slate-700 leading-relaxed text-justify text-sm whitespace-pre-wrap">
+                        {section.content || (
+                          <span className="text-slate-300 italic">Sección sin contenido redactado.</span>
+                        )}
+                      </div>
                     </div>
                   ))
                 ) : (
-                  <p className="text-slate-400 text-sm italic">
-                    Sin secciones aún. Completa la redacción en el espacio de
-                    trabajo.
-                  </p>
+                  <div className="py-20 text-center space-y-4">
+                    <FileText size={48} className="text-slate-200 mx-auto" />
+                    <p className="text-slate-400 text-sm italic">
+                      No hay contenido redactado para exportar. 
+                      Vuelve al espacio de trabajo para completar las secciones.
+                    </p>
+                  </div>
                 )}
               </div>
             </div>
@@ -195,29 +206,44 @@ export function ExportView({ project }: ExportViewProps) {
             <div className="absolute top-0 right-0 p-4 opacity-10">
               <Sparkles size={120} />
             </div>
-            <h3 className="text-xl font-bold mb-2">¿Todo listo?</h3>
+            <h3 className="text-xl font-bold mb-2">
+              {progressPercent === 100 ? "¿Todo listo?" : "Trabajo en curso"}
+            </h3>
             <p className="text-slate-400 text-sm mb-6 font-medium">
-              Hemos analizado el documento y cumple con el 100% de los
-              requisitos de la convocatoria.
+              {progressPercent === 100 
+                ? "Hemos analizado el documento y cumple con el 100% de los requisitos detectados."
+                : `Has completado ${completedSections} de ${totalSections} secciones requeridas.`}
             </p>
             <div className="space-y-4 mb-8">
               <div className="flex items-center gap-3 text-sm">
-                <CheckCircle2 size={18} className="text-emerald-400" />
-                <span>Estructura completa</span>
+                {totalSections > 0 ? (
+                  <CheckCircle2 size={18} className="text-emerald-400" />
+                ) : (
+                  <div className="w-[18px] h-[18px] rounded-full border border-slate-600" />
+                )}
+                <span>Estructura generada</span>
               </div>
               <div className="flex items-center gap-3 text-sm">
-                <CheckCircle2 size={18} className="text-emerald-400" />
-                <span>Presupuesto coherente</span>
+                {progressPercent > 50 ? (
+                  <CheckCircle2 size={18} className="text-emerald-400" />
+                ) : (
+                  <div className="w-[18px] h-[18px] rounded-full border border-slate-600" />
+                )}
+                <span>Contenido avanzado</span>
               </div>
               <div className="flex items-center gap-3 text-sm">
-                <CheckCircle2 size={18} className="text-emerald-400" />
-                <span>Contexto integrado</span>
+                {progressPercent === 100 ? (
+                  <CheckCircle2 size={18} className="text-emerald-400" />
+                ) : (
+                  <div className="w-[18px] h-[18px] rounded-full border border-slate-600" />
+                )}
+                <span>Requisitos verificados</span>
               </div>
             </div>
             <button
               type="button"
-              onClick={handleExport}
-              disabled={isExporting}
+              onClick={handleExportPdf}
+              disabled={isExporting || !hasContent}
               className="w-full py-4 bg-blue-600 hover:bg-blue-500 rounded-2xl font-black text-sm transition-all shadow-lg shadow-blue-500/20 flex items-center justify-center gap-2 disabled:opacity-70"
             >
               {isExporting ? (
@@ -225,7 +251,7 @@ export function ExportView({ project }: ExportViewProps) {
               ) : (
                 <Zap fill="currentColor" size={16} />
               )}
-              {isExporting ? "Generando Archivos…" : "Finalizar y Descargar"}
+              {isExporting ? "Generando Archivos…" : "Finalizar y Descargar PDF"}
             </button>
           </div>
 
@@ -241,12 +267,6 @@ export function ExportView({ project }: ExportViewProps) {
               title="Adobe PDF"
               icon={FileDown}
               onClick={handleExportPdf}
-            />
-            <ExportCard
-              type="Enlace"
-              title="Compartir Expediente"
-              icon={ExternalLink}
-              onClick={() => {}}
             />
           </div>
 
