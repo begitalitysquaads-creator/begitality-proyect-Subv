@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { Upload, FileText, Loader2, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -26,6 +27,7 @@ export function CargarBasesConvocatoria({
   const [uploading, setUploading] = useState(false);
   const [dragging, setDragging] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
 
   const handleUpload = useCallback(
     async (fileList: FileList | null) => {
@@ -81,6 +83,7 @@ export function CargarBasesConvocatoria({
 
         // Actualizar lista: agregar los nuevos al inicio
         setFiles((prev) => [...uploaded, ...prev]);
+        router.refresh();
       } catch (err) {
         console.error("Unexpected upload error:", err);
         setError(
@@ -111,6 +114,7 @@ export function CargarBasesConvocatoria({
           return;
         }
         setFiles((prev) => prev.filter((f) => f.id !== id));
+        router.refresh();
       } catch (err) {
         console.error("Delete error:", err);
         setError("Error inesperado al eliminar");

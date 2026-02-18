@@ -63,3 +63,37 @@ export interface AIMessage {
 }
 
 export type ProjectWithSections = Project & { sections?: Section[] };
+
+// --- Diagnósticos IA ---
+
+export type RiskLevel = "high" | "medium" | "low";
+
+export interface DiagnosticRisk {
+  level: RiskLevel;
+  message: string;
+  section_id?: string;
+}
+
+export interface DiagnosticSuggestion {
+  priority: 1 | 2 | 3;
+  action: string;
+  section_title?: string;
+}
+
+export interface DiagnosticSectionScore {
+  score: number;
+  feedback: string;
+}
+
+export interface ProjectDiagnostic {
+  id: string;
+  project_id: string;
+  generated_at: string;
+  overall_score: number;
+  summary: string;
+  risks: DiagnosticRisk[];
+  suggestions: DiagnosticSuggestion[];
+  section_scores: Record<string, DiagnosticSectionScore>;
+  requirements_found: string[];
+  model_used: string;
+}

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { PlusCircle, FileText } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
+import { ProjectsListClient } from "@/components/project/ProjectsListClient";
 
 export default async function ProjectsPage() {
   const supabase = await createClient();
@@ -57,39 +58,7 @@ export default async function ProjectsPage() {
           </Link>
         </div>
       ) : (
-        <ul className="space-y-3">
-          {projects.map((p) => (
-            <li key={p.id}>
-              <Link
-                href={
-                  p.status === "ready_export"
-                    ? `/dashboard/projects/${p.id}/export`
-                    : `/dashboard/projects/${p.id}`
-                }
-                className="flex items-center justify-between bg-white border border-slate-200 rounded-2xl p-6 hover:border-blue-200 hover:shadow-md transition-all"
-              >
-                <div className="flex items-center gap-4">
-                  <div className="p-3 bg-slate-50 rounded-xl">
-                    <FileText size={22} className="text-slate-600" />
-                  </div>
-                  <div>
-                    <p className="font-bold text-slate-900">{p.name}</p>
-                    <p className="text-sm text-slate-500">{p.grant_name}</p>
-                  </div>
-                </div>
-                <span
-                  className={`text-xs font-bold px-3 py-1 rounded-full ${
-                    p.status === "ready_export"
-                      ? "bg-emerald-100 text-emerald-700"
-                      : "bg-slate-100 text-slate-600"
-                  }`}
-                >
-                  {p.status === "ready_export" ? "Listo" : "En curso"}
-                </span>
-              </Link>
-            </li>
-          ))}
-        </ul>
+        <ProjectsListClient projects={projects} />
       )}
     </div>
   );
