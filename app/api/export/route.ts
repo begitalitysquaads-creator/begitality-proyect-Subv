@@ -32,7 +32,7 @@ export async function POST(req: Request) {
 
   const { data: project } = await supabase
     .from("projects")
-    .select("id, name, grant_name")
+    .select("id, name, grant_name, viability_report, review_report")
     .eq("id", projectId)
     .eq("user_id", user.id)
     .single();
@@ -54,9 +54,18 @@ export async function POST(req: Request) {
     const buffer = await generatePdf({
       title: project.name,
       grantName: project.grant_name,
+      viabilityReport: project.viability_report,
+      reviewReport: project.review_report,
       sections: sectionsList.map((s) => ({ title: s.title, content: s.content })),
     });
     const filename = `Memoria_Tecnica_${project.name.replace(/\s+/g, "_")}.pdf`;
+
+    // Marcar como exportado (Histórico)
+    await supabase
+      .from("projects")
+      .update({ status: "exported" })
+      .eq("id", projectId);
+
     return new NextResponse(new Uint8Array(buffer), {
       status: 200,
       headers: {

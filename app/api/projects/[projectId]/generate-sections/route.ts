@@ -14,150 +14,73 @@ export async function POST(
 ) {
   const { projectId } = await context.params;
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) {
-    return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-  }
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
 
-  const { data: project } = await supabase
-    .from("projects")
-    .select("id, name, grant_name")
-    .eq("id", projectId)
-    .eq("user_id", user.id)
-    .single();
+  const { data: project } = await supabase.from("projects").select("id, name, grant_name").eq("id", projectId).single();
+  if (!project) return NextResponse.json({ error: "Proyecto no encontrado" }, { status: 404 });
 
-  if (!project) {
-    return NextResponse.json({ error: "Proyecto no encontrado" }, { status: 404 });
-  }
-
-  const { data: bases } = await supabase
-    .from("convocatoria_bases")
-    .select("id, name, file_path")
-    .eq("project_id", projectId)
-    .not("file_path", "is", null);
-
-  if (!bases?.length) {
-    return NextResponse.json(
-      { error: "No hay bases de convocatoria cargadas. Sube al menos un PDF." },
-      { status: 400 }
-    );
-  }
-
-  let fullText = "";
-  const errors: string[] = [];
-  for (const b of bases) {
-    if (!b.file_path) continue;
-    const { data: blob, error: downloadErr } = await supabase.storage
-      .from(BUCKET)
-      .download(b.file_path);
-    if (downloadErr) {
-      errors.push(`Descarga de "${b.name}": ${downloadErr.message}`);
-      continue;
+  const { data: bases } = await supabase.from("convocatoria_bases").select("name, file_path").eq("project_id", projectId);
+  let grantText = "";
+  if (bases) {
+    for (const b of bases) {
+      try {
+        const { data: blob } = await supabase.storage.from(BUCKET).download(b.file_path!);
+        if (blob) grantText += await extractTextFromPdf(Buffer.from(await blob.arrayBuffer()));
+      } catch (e) {}
     }
-    if (!blob || blob.size === 0) {
-      errors.push(`El archivo "${b.name}" está vacío.`);
-      continue;
-    }
-    const buffer = Buffer.from(await blob.arrayBuffer());
-    try {
-      const text = await extractTextFromPdf(buffer);
-      if (text.length > 0) {
-        fullText += `\n--- ${b.name} ---\n${text}`;
-      } else {
-        errors.push(`No se pudo extraer texto de "${b.name}" (PDF sin texto extraíble).`);
-      }
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
-      errors.push(`Error al procesar "${b.name}": ${msg}`);
-    }
-  }
-
-  const textToSend = fullText.slice(0, MAX_TEXT_LENGTH).trim();
-  if (!textToSend) {
-    return NextResponse.json(
-      { error: "No se pudo extraer texto de los PDFs.", details: errors },
-      { status: 400 }
-    );
   }
 
   const geminiKey = process.env.GEMINI_API_KEY;
-  if (!geminiKey) {
-    return NextResponse.json({ error: "GEMINI_API_KEY no configurada" }, { status: 500 });
-  }
+  if (!geminiKey) return NextResponse.json({ error: "IA no configurada" }, { status: 500 });
 
   try {
     const genAI = new GoogleGenerativeAI(geminiKey);
-    
-    // Definición de esquema con tipado explícito para evitar errores de compilación
     const model = genAI.getGenerativeModel({
-      model: "gemini-1.5-flash",
+      model: "gemini-3-flash-preview",
       generationConfig: {
         responseMimeType: "application/json",
         responseSchema: {
-          description: "Lista de títulos de secciones para la memoria técnica",
           type: SchemaType.ARRAY,
           items: {
-            type: SchemaType.STRING,
+            type: SchemaType.OBJECT,
+            properties: {
+              title: { type: SchemaType.STRING },
+              content: { type: SchemaType.STRING },
+            },
+            required: ["title", "content"],
           },
         },
       },
-    });
+    }, { apiVersion: "v1beta" });
 
-    const prompt = `Analiza el texto de la convocatoria de subvención y determina las secciones obligatorias que debe tener la memoria técnica. 
+    const prompt = `Analiza la convocatoria y genera la estructura de la memoria con borradores técnicos densos.
     Proyecto: ${project.name}
-    Convocatoria: ${project.grant_name}
-
-    Responde con un array de strings con los títulos de las secciones.
-    
-    Texto de la convocatoria:
-    ${textToSend}`;
+    Bases: ${grantText.slice(0, MAX_TEXT_LENGTH)}`;
 
     const result = await model.generateContent(prompt);
-    const response = result.response;
-    const titles = JSON.parse(response.text()) as string[];
+    const response = await result.response;
+    const text = response.text();
+    const sectionsData = JSON.parse(text);
 
-    if (!titles.length) {
-      throw new Error("La IA no devolvió secciones");
-    }
-
-    // --- Lógica no destructiva ---
-    const { data: existingSections } = await supabase
-      .from("sections")
-      .select("id, title, content")
-      .eq("project_id", projectId);
-
-    const existingTitles = new Set(existingSections?.map(s => s.title.toLowerCase()) || []);
+    const { data: existing } = await supabase.from("sections").select("title").eq("project_id", projectId);
+    const existingTitles = new Set(existing?.map(s => s.title.toLowerCase()) || []);
     
-    // Solo insertar secciones que no existan ya (evita duplicados y pérdida de datos)
-    const sectionsToInsert = titles
-      .filter(t => !existingTitles.has(t.toLowerCase()))
-      .map((title, i) => ({
+    const toInsert = sectionsData
+      .filter((s: any) => !existingTitles.has(s.title.toLowerCase()))
+      .map((s: any, i: number) => ({
         project_id: projectId,
-        title: title.slice(0, 500),
-        content: "",
-        sort_order: (existingSections?.length || 0) + i,
+        title: s.title.slice(0, 500),
+        content: s.content || "",
+        sort_order: i,
         is_completed: false,
       }));
 
-    if (sectionsToInsert.length > 0) {
-      const { error: insertErr } = await supabase.from("sections").insert(sectionsToInsert);
-      if (insertErr) throw insertErr;
-    }
+    if (toInsert.length > 0) await supabase.from("sections").insert(toInsert);
 
-    return NextResponse.json({
-      ok: true,
-      new_sections: sectionsToInsert.length,
-      total_sections: (existingSections?.length || 0) + sectionsToInsert.length,
-      sections: titles,
-    });
-
-  } catch (error) {
-    console.error("Error en IA/DB:", error);
-    return NextResponse.json(
-      { error: "Error al procesar con IA", message: error instanceof Error ? error.message : "Desconocido" },
-      { status: 502 }
-    );
+    return NextResponse.json({ ok: true });
+  } catch (error: any) {
+    console.error("Generate Sections Error:", error);
+    return NextResponse.json({ error: "Error en IA", message: error.message }, { status: 502 });
   }
 }

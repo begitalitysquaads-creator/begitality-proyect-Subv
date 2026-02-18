@@ -19,7 +19,7 @@ export default async function DashboardPage() {
     .from("projects")
     .select("id, name, grant_name, status, updated_at")
     .eq("user_id", user.id)
-    .neq("status", "archived")
+    .not("status", "in", "(archived,exported)") // Excluimos archivados y finalizados
     .order("updated_at", { ascending: false })
     .limit(10);
 

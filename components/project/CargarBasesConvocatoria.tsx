@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { Upload, FileText, Loader2, Trash2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
@@ -30,6 +31,7 @@ export function CargarBasesConvocatoria({
   const [error, setError] = useState<string | null>(null);
 
   const supabase = createClient();
+  const router = useRouter();
 
   const refreshFiles = useCallback(async () => {
     const { data } = await supabase
@@ -38,46 +40,64 @@ export function CargarBasesConvocatoria({
       .eq("project_id", projectId)
       .order("created_at", { ascending: false });
     setFiles(data ?? []);
-  }, [projectId]);
+    router.refresh(); // Notificar a la página de los cambios
+  }, [projectId, router]);
 
   const handleUpload = useCallback(
     async (fileList: FileList | null) => {
-      if (!fileList?.length) return;
+      // CAPTURA INMEDIATA: Convertimos a Array antes de cualquier await
+      const filesToUpload = fileList ? Array.from(fileList) : [];
+      if (filesToUpload.length === 0) return;
+      
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         setError("Sesión expirada. Vuelve a iniciar sesión.");
         return;
       }
+      
       setError(null);
       setUploading(true);
-      const toUpload = Array.from(fileList).filter((f) => f.type === "application/pdf" && f.size <= MAX_SIZE_MB * 1024 * 1024);
-      const skipped = Array.from(fileList).length - toUpload.length;
-      if (skipped > 0) {
-        setError(`Se omitieron ${skipped} fichero(s) (solo PDF, máx. ${MAX_SIZE_MB} MB).`);
-      }
-      for (const file of toUpload) {
-        const path = `${user.id}/${projectId}/${crypto.randomUUID()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
+
+      console.log(`Iniciando proceso para ${filesToUpload.length} archivos...`);
+
+      for (const file of filesToUpload) {
+        // Validación básica de tamaño
+        if (file.size > MAX_SIZE_MB * 1024 * 1024) {
+          setError(`El archivo ${file.name} es demasiado grande (máx ${MAX_SIZE_MB}MB).`);
+          continue;
+        }
+
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${Math.random().toString(36).slice(2)}-${Date.now()}.${fileExt}`;
+        const path = `${user.id}/${projectId}/${fileName}`;
+        
+        console.log(`Subiendo: ${file.name} a la ruta: ${path}`);
+
         const { error: uploadErr } = await supabase.storage.from(BUCKET).upload(path, file, {
           cacheControl: "3600",
           upsert: false,
         });
+
         if (uploadErr) {
-          setError(uploadErr.message);
-          setUploading(false);
-          return;
+          console.error("Error en Supabase Storage:", uploadErr);
+          setError(`Error en ${file.name}: ${uploadErr.message}`);
+          break; // Detener en caso de error de permisos/storage
         }
+
         const { error: insertErr } = await supabase.from("convocatoria_bases").insert({
           project_id: projectId,
           name: file.name,
           file_path: path,
           file_size: file.size,
         });
+
         if (insertErr) {
-          setError(insertErr.message);
-          setUploading(false);
-          return;
+          console.error("Error en Base de Datos:", insertErr);
+          setError(`Error al registrar ${file.name}: ${insertErr.message}`);
+          break;
         }
       }
+      
       await refreshFiles();
       setUploading(false);
     },
