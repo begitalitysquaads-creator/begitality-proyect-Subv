@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { logActivity } from "@/lib/activity";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -57,6 +58,15 @@ export async function POST(req: Request) {
       sections: sectionsList.map((s) => ({ title: s.title, content: s.content })),
     });
     const filename = `Memoria_Tecnica_${project.name.replace(/\s+/g, "_")}.pdf`;
+
+    await logActivity({
+      userId: user.id,
+      projectId,
+      action: "exported_pdf",
+      description: `Exportado como PDF: "${project.name}"`,
+      metadata: { format: "pdf", sections_count: sectionsList.length },
+    });
+
     return new NextResponse(new Uint8Array(buffer), {
       status: 200,
       headers: {
@@ -74,6 +84,15 @@ export async function POST(req: Request) {
       sections: sectionsList.map((s) => ({ title: s.title, content: s.content })),
     });
     const filename = `Memoria_Tecnica_${project.name.replace(/\s+/g, "_")}.docx`;
+
+    await logActivity({
+      userId: user.id,
+      projectId,
+      action: "exported_docx",
+      description: `Exportado como DOCX: "${project.name}"`,
+      metadata: { format: "docx", sections_count: sectionsList.length },
+    });
+
     return new NextResponse(new Uint8Array(buffer), {
       status: 200,
       headers: {

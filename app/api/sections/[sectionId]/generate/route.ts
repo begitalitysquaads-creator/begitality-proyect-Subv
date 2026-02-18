@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { extractTextFromPdf } from "@/lib/pdf-extract";
+import { logActivity } from "@/lib/activity";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -175,6 +176,14 @@ Responde ÚNICAMENTE con el texto de la sección, sin títulos ni prefijos.`;
             { status: 500 }
         );
     }
+
+    await logActivity({
+        userId: user.id,
+        projectId: section.project_id,
+        action: "section_content_generated",
+        description: `Contenido generado con IA para "${section.title}"`,
+        metadata: { section_id: sectionId, section_title: section.title },
+    });
 
     return NextResponse.json({
         ok: true,

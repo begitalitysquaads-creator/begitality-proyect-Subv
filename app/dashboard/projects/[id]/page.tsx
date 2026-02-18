@@ -64,6 +64,7 @@ export default async function ProjectWorkspacePage({
           projectId={id}
           currentStatus={project.status}
           canMarkReady={allCompleted}
+          hasSections={hasSections}
         />
       </header>
 

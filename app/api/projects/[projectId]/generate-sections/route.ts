@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { extractTextFromPdf } from "@/lib/pdf-extract";
+import { logActivity } from "@/lib/activity";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -192,6 +193,14 @@ ${textToSend}`;
       { status: 500 }
     );
   }
+
+  await logActivity({
+    userId: user.id,
+    projectId,
+    action: "sections_generated",
+    description: `Generadas ${titles.length} secciones con IA`,
+    metadata: { count: titles.length, sections: titles },
+  });
 
   return NextResponse.json({
     ok: true,

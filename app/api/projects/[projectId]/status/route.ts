@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { logActivity } from "@/lib/activity";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -47,6 +48,14 @@ export async function PATCH(
     if (!data) {
         return NextResponse.json({ error: "Proyecto no encontrado" }, { status: 404 });
     }
+
+    await logActivity({
+        userId: user.id,
+        projectId,
+        action: "status_changed",
+        description: `Estado cambiado a "${body.status}"`,
+        metadata: { new_status: body.status },
+    });
 
     return NextResponse.json({ ok: true, project: data });
 }

@@ -8,6 +8,7 @@ import {
     Loader2,
     FileCheck,
     AlertCircle,
+    Download,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -15,6 +16,7 @@ interface ProjectStatusBarProps {
     projectId: string;
     currentStatus: string;
     canMarkReady: boolean;
+    hasSections: boolean;
 }
 
 const statusMap: Record<string, { label: string; color: string; order: number }> = {
@@ -28,6 +30,7 @@ export function ProjectStatusBar({
     projectId,
     currentStatus,
     canMarkReady,
+    hasSections,
 }: ProjectStatusBarProps) {
     const [loading, setLoading] = useState(false);
     const router = useRouter();
@@ -107,6 +110,18 @@ export function ProjectStatusBar({
                 >
                     Ir a Exportar
                     <ChevronRight size={16} />
+                </button>
+            )}
+
+            {/* Botón de exportar visible siempre que haya secciones */}
+            {hasSections && currentStatus !== "ready_export" && (
+                <button
+                    onClick={() => router.push(`/dashboard/projects/${projectId}/export`)}
+                    className="flex items-center gap-1.5 text-sm font-bold text-slate-600 hover:text-blue-600 hover:bg-blue-50 px-3 py-1.5 rounded-lg transition-colors"
+                    title="Exportar memoria técnica"
+                >
+                    <Download size={14} />
+                    Exportar
                 </button>
             )}
         </div>

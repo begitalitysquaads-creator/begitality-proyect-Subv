@@ -42,6 +42,17 @@ export default function NewProjectPage() {
       setError(err.message);
       return;
     }
+    // Registrar actividad de creación de proyecto
+    fetch("/api/activity", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        projectId: data.id,
+        action: "project_created",
+        description: `Proyecto creado: "${name || "Sin título"}"`,
+        metadata: { project_name: name, grant_name: grantName },
+      }),
+    }).catch(() => {}); // No bloquear la navegación
     router.push(`/dashboard/projects/${data.id}`);
     router.refresh();
   }
