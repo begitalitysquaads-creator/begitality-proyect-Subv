@@ -7,7 +7,6 @@ import {
   FileText,
   Download,
   FileDown,
-  ExternalLink,
   Eye,
   ShieldCheck,
   Printer,
@@ -16,6 +15,7 @@ import {
   Loader2,
   CheckCircle2,
 } from "lucide-react";
+import { GoogleDriveButton } from "./GoogleDriveButton";
 interface SectionData {
   id: string;
   title: string;
@@ -242,11 +242,9 @@ export function ExportView({ project }: ExportViewProps) {
               icon={FileDown}
               onClick={handleExportPdf}
             />
-            <ExportCard
-              type="Enlace"
-              title="Compartir Expediente"
-              icon={ExternalLink}
-              onClick={() => {}}
+            <GoogleDriveButton
+              projectId={project.id}
+              returnUrl={`/dashboard/projects/${project.id}/export`}
             />
           </div>
 

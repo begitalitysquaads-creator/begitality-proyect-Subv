@@ -1,14 +1,20 @@
+import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
-import { NextResponse } from "next/server";
-import type { NextRequest } from "next/server";
+
+type CookieToSet = {
+  name: string;
+  value: string;
+  options?: Record<string, unknown>;
+};
 
 export async function GET(request: NextRequest) {
-  const requestUrl = new URL(request.url);
-  const code = requestUrl.searchParams.get("code");
-  const next = requestUrl.searchParams.get("next") ?? "/dashboard";
+  const { searchParams, origin } = new URL(request.url);
+  const code = searchParams.get("code");
+  const next = searchParams.get("next") ?? "/dashboard";
 
   if (code) {
-    const response = NextResponse.redirect(new URL(next, requestUrl.origin));
+    const response = NextResponse.redirect(`${origin}${next}`);
+
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -17,7 +23,7 @@ export async function GET(request: NextRequest) {
           getAll() {
             return request.cookies.getAll();
           },
-          setAll(cookiesToSet: { name: string; value: string; options?: Record<string, unknown> }[]) {
+          setAll(cookiesToSet: CookieToSet[]) {
             cookiesToSet.forEach(({ name, value, options }) =>
               response.cookies.set(name, value, options ?? {})
             );
@@ -25,12 +31,18 @@ export async function GET(request: NextRequest) {
         },
       }
     );
+
     const { error } = await supabase.auth.exchangeCodeForSession(code);
-    if (error) {
-      return NextResponse.redirect(new URL(`/login?error=${encodeURIComponent(error.message)}`, requestUrl.origin));
+
+    if (!error) {
+      return response;
     }
-    return response;
+
+    console.error("Auth callback error:", error);
+    return NextResponse.redirect(
+      `${origin}/login?error=${encodeURIComponent(error.message)}`
+    );
   }
 
-  return NextResponse.redirect(new URL("/login", requestUrl.origin));
+  return NextResponse.redirect(`${origin}/login`);
 }

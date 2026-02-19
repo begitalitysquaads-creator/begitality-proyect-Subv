@@ -7,6 +7,7 @@ import { Zap } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import * as Label from "@radix-ui/react-label";
 import { cn } from "@/lib/utils";
+import { GoogleSignInButton } from "@/components/auth/GoogleSignInButton";
 
 export default function SignupPage() {
   const [email, setEmail] = useState("");
@@ -36,8 +37,7 @@ export default function SignupPage() {
       return;
     }
     setSuccess(true);
-    setTimeout(() => router.push("/dashboard"), 2000);
-    router.refresh();
+    setTimeout(() => router.push("/login"), 2000);
   }
 
   if (success) {
@@ -49,7 +49,7 @@ export default function SignupPage() {
           </div>
           <h2 className="text-xl font-bold text-slate-900">Cuenta creada</h2>
           <p className="text-slate-500 text-sm mt-2">
-            Revisa tu email para confirmar. Redirigiendo al panel…
+            Revisa tu email para confirmar. Redirigiendo al inicio de sesión…
           </p>
         </div>
       </div>
@@ -146,10 +146,21 @@ export default function SignupPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3.5 rounded-xl font-bold text-white bg-blue-600 hover:bg-blue-500 disabled:opacity-60 transition-all"
+            className="w-full py-3.5 rounded-xl font-black text-white bg-blue-600 hover:bg-blue-500 disabled:opacity-60 transition-all shadow-lg shadow-blue-500/20"
           >
             {loading ? "Creando cuenta…" : "Registrarse"}
           </button>
+
+          <div className="relative my-6">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t border-slate-100"></span>
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-white px-4 text-slate-400 font-bold">o</span>
+            </div>
+          </div>
+
+          <GoogleSignInButton text="Registrarse con Google" />
         </form>
         <p className="text-center text-slate-500 text-sm mt-6">
           ¿Ya tienes cuenta?{" "}

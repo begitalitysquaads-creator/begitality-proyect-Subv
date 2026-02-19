@@ -720,7 +720,7 @@ export function SectionEditor({
                         Secciones de la memoria
                         {totalCount > 0 && (
                             <span className="text-sm font-normal text-slate-400">
-                                · {totalWords.toLocaleString()} palabras en total
+                                · {String(totalWords).replace(/\B(?=(\d{3})+(?!\d))/g, ".")} palabras en total
                             </span>
                         )}
                     </h2>
