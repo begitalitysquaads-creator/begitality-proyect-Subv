@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { extractTextFromPdf } from "@/lib/pdf-extract";
-import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
+import { chatModel } from "@/lib/ai";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -17,7 +17,7 @@ export async function POST(
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
 
-  const { data: project } = await supabase.from("projects").select("id, name, grant_name").eq("id", projectId).single();
+  const { data: project } = await supabase.from("projects").select("id, name, grant_name, writing_instructions").eq("id", projectId).single();
   if (!project) return NextResponse.json({ error: "Proyecto no encontrado" }, { status: 404 });
 
   const { data: bases } = await supabase.from("convocatoria_bases").select("name, file_path").eq("project_id", projectId);
@@ -31,37 +31,22 @@ export async function POST(
     }
   }
 
-  const geminiKey = process.env.GEMINI_API_KEY;
-  if (!geminiKey) return NextResponse.json({ error: "IA no configurada" }, { status: 500 });
-
   try {
-    const genAI = new GoogleGenerativeAI(geminiKey);
-    const model = genAI.getGenerativeModel({
-      model: "gemini-3-flash-preview",
-      generationConfig: {
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: SchemaType.ARRAY,
-          items: {
-            type: SchemaType.OBJECT,
-            properties: {
-              title: { type: SchemaType.STRING },
-              content: { type: SchemaType.STRING },
-            },
-            required: ["title", "content"],
-          },
-        },
-      },
-    }, { apiVersion: "v1beta" });
-
     const prompt = `Analiza la convocatoria y genera la estructura de la memoria con borradores técnicos densos.
     Proyecto: ${project.name}
-    Bases: ${grantText.slice(0, MAX_TEXT_LENGTH)}`;
+    Bases: ${grantText.slice(0, MAX_TEXT_LENGTH)}
+    
+    INSTRUCCIONES ADICIONALES DE REDACCIÓN:
+    ${project.writing_instructions || "Utiliza un tono profesional y técnico estándar."}
+    
+    RESPONDE EXCLUSIVAMENTE EN FORMATO JSON PURO (ARRAY DE OBJETOS).
+    Esquema: [{ "title": "string", "content": "string" }]`;
 
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const text = response.text();
-    const sectionsData = JSON.parse(text);
+    const result = await chatModel.generateContent(prompt);
+    const rawText = result.response.text().trim();
+    const cleanJson = rawText.replace(/```json/g, "").replace(/```/g, "").trim();
+    
+    const sectionsData = JSON.parse(cleanJson);
 
     const { data: existing } = await supabase.from("sections").select("title").eq("project_id", projectId);
     const existingTitles = new Set(existing?.map(s => s.title.toLowerCase()) || []);

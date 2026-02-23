@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { extractTextFromPdf } from "@/lib/pdf-extract";
-import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
+import { chatModel } from "@/lib/ai";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -36,33 +36,37 @@ export async function POST(
     }
   }
 
-  const geminiKey = process.env.GEMINI_API_KEY;
   try {
-    const genAI = new GoogleGenerativeAI(geminiKey!);
-    const model = genAI.getGenerativeModel({
-      model: "gemini-3-flash-preview",
+    const prompt = `Actúa como un Consultor Senior de Ayudas Públicas experto en BOE y normativas de subvenciones.
+    Analiza exhaustivamente si el siguiente cliente es ELEGIBLE para la subvención basándote en su perfil técnico-financiero y la documentación oficial.
+    
+    PERFIL DEL CLIENTE:
+    - Razón Social: ${client.name}
+    - CNAE: ${client.cnae || "No definido"}
+    - Facturación: ${client.annual_turnover || 0}€
+    - Empleados: ${client.employee_count || 0}
+    - Constitución: ${client.constitution_date || "No definido"}
+    - Región: ${client.fiscal_region || "No definido"}
+    - Minimis Recibido: ${client.de_minimis_received || 0}€
+    - Sector: ${client.industry || "No definido"}
+
+    DOCUMENTACIÓN DE LA CONVOCATORIA (BOE/BASES): 
+    ${grantText.slice(0, MAX_TEXT_LENGTH) || "No se han subido bases técnicas aún."}
+    
+    INSTRUCCIONES CRÍTICAS:
+    1. Compara estrictamente los requisitos de la convocatoria (CNAE, antigüedad, tamaño empresa, etc.) con el perfil del cliente.
+    2. Si detectas cualquier discrepancia, lístala en 'critical_gaps'.
+    3. Calcula la 'probability' del 0 al 100. Solo pon 100 si no hay ningún gap crítico.
+    
+    Responde estrictamente en formato JSON con el esquema solicitado.`;
+
+    const result = await chatModel.generateContent({
+      contents: [{ role: "user", parts: [{ text: prompt }] }],
       generationConfig: {
         responseMimeType: "application/json",
-        responseSchema: {
-          type: SchemaType.OBJECT,
-          properties: {
-            status: { type: SchemaType.STRING, description: "Estatus final: APTO, CONDICIONADO o NO APTO" },
-            summary: { type: SchemaType.STRING },
-            strengths: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
-            risks: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
-            recommendations: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
-            probability: { type: SchemaType.INTEGER, description: "Probabilidad de éxito 0-100" }
-          },
-          required: ["status", "summary", "strengths", "risks", "recommendations", "probability"],
-        },
-      },
-    }, { apiVersion: "v1beta" });
-
-    const prompt = `Analiza la elegibilidad de ${client.name} para la convocatoria. 
-    DOCS: ${grantText.slice(0, MAX_TEXT_LENGTH)}
-    CLIENTE: ${JSON.stringify(client)}`;
-
-    const result = await model.generateContent(prompt);
+      }
+    });
+    
     const text = result.response.text();
     
     // Validar que la respuesta es un JSON válido antes de guardar

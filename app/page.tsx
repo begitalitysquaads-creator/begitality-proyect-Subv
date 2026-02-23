@@ -21,12 +21,6 @@ export default function HomePage() {
         >
           Iniciar sesión
         </Link>
-        <Link
-          href="/signup"
-          className="px-6 py-3 rounded-2xl font-bold text-white bg-blue-600 hover:bg-blue-500 shadow-lg shadow-blue-600/20 transition-all"
-        >
-          Registrarse
-        </Link>
       </div>
     </div>
   );

@@ -2,10 +2,11 @@
 
 import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
-import { PlusCircle, Search, Building2, Mail, Phone, ExternalLink, Archive, CheckCircle2 } from "lucide-react";
+import { PlusCircle, Search, Building2, Mail, Phone, ExternalLink, Archive, CheckCircle2, Layers, Zap, Trash2, Loader2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Client } from "@/lib/types";
 import * as Tabs from "@radix-ui/react-tabs";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { cn } from "@/lib/utils";
 
 export default function ClientsListPage() {
@@ -13,40 +14,65 @@ export default function ClientsListPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [activeTab, setActiveTab] = useState("active");
+  
+  // Confirmation state
+  const [confirmArchive, setConfirmArchive] = useState<{open: boolean, id: string, name: string}>({open: false, id: "", name: ""});
+  const [archiving, setArchiving] = useState(false);
+
   const supabase = createClient();
 
   useEffect(() => {
-    async function loadClients() {
-      const { data } = await supabase
-        .from("clients")
-        .select("*")
-        .order("name");
-      setClients(data || []);
-      setLoading(false);
-    }
     loadClients();
   }, [supabase]);
 
+  async function loadClients() {
+    setLoading(true);
+    const { data } = await supabase
+      .from("clients")
+      .select("*")
+      .order("name");
+    setClients(data || []);
+    setLoading(false);
+  }
+
+  const handleArchive = async () => {
+    setArchiving(true);
+    const { error } = await supabase
+      .from("clients")
+      .update({ status: 'archived' })
+      .eq("id", confirmArchive.id);
+
+    if (!error) {
+      setConfirmArchive({ open: false, id: "", name: "" });
+      loadClients();
+    }
+    setArchiving(false);
+  };
+
   const stats = useMemo(() => {
     return {
+      all: clients.length,
       active: clients.filter(c => (c.status || 'active') === 'active').length,
       archived: clients.filter(c => c.status === 'archived').length
     };
   }, [clients]);
 
   const filteredClients = useMemo(() => {
-    const s = search.toLowerCase();
+    const s = search.toLowerCase().trim();
     return clients.filter(c => {
-      const matchesStatus = activeTab === 'active' 
-        ? (c.status || 'active') === 'active' 
-        : c.status === 'archived';
+      // 1. Filtrado por Pestaña
+      const matchesTab = 
+        activeTab === 'all' ? true :
+        activeTab === 'active' ? (c.status || 'active') === 'active' :
+        c.status === 'archived';
         
+      // 2. Filtrado por Búsqueda
       const matchesSearch = 
         c.name.toLowerCase().includes(s) || 
         (c.tax_id || "").toLowerCase().includes(s) ||
         (c.contact_email || "").toLowerCase().includes(s);
         
-      return matchesStatus && matchesSearch;
+      return matchesTab && matchesSearch;
     });
   }, [clients, search, activeTab]);
 
@@ -83,28 +109,48 @@ export default function ClientsListPage() {
       </header>
 
       <Tabs.Root value={activeTab} onValueChange={setActiveTab} className="space-y-8">
-        <Tabs.List className="flex gap-2 p-1 bg-slate-100 rounded-2xl w-fit">
+        <Tabs.List className="flex gap-2 p-1.5 bg-slate-100/80 rounded-2xl w-fit border border-slate-200/50 backdrop-blur-sm">
+          <Tabs.Trigger
+            value="all"
+            className={cn(
+              "flex items-center gap-2.5 px-5 py-2.5 rounded-xl text-xs font-black transition-all group",
+              activeTab === "all" ? "bg-white text-slate-900 shadow-sm" : "text-slate-400 hover:text-slate-600"
+            )}
+          >
+            <Layers size={14} className={cn("transition-colors", activeTab === "all" ? "text-blue-600" : "text-slate-300 group-hover:text-slate-400")} />
+            Todos
+            <span className={cn(
+              "ml-1 px-2 py-0.5 rounded-md text-[10px] font-bold transition-all",
+              activeTab === "all" ? "bg-slate-900 text-white" : "bg-slate-200 text-slate-500"
+            )}>{stats.all}</span>
+          </Tabs.Trigger>
           <Tabs.Trigger
             value="active"
             className={cn(
-              "flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-black transition-all",
+              "flex items-center gap-2.5 px-5 py-2.5 rounded-xl text-xs font-black transition-all group",
               activeTab === "active" ? "bg-white text-blue-600 shadow-sm" : "text-slate-400 hover:text-slate-600"
             )}
           >
-            <CheckCircle2 size={16} />
+            <CheckCircle2 size={14} className={cn("transition-colors", activeTab === "active" ? "text-blue-600" : "text-slate-300 group-hover:text-slate-400")} />
             Activos
-            <span className="ml-1 opacity-50 font-medium text-[10px]">{stats.active}</span>
+            <span className={cn(
+              "ml-1 px-2 py-0.5 rounded-md text-[10px] font-bold transition-all",
+              activeTab === "active" ? "bg-blue-600 text-white" : "bg-slate-200 text-slate-500"
+            )}>{stats.active}</span>
           </Tabs.Trigger>
           <Tabs.Trigger
             value="archived"
             className={cn(
-              "flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-black transition-all",
+              "flex items-center gap-2.5 px-5 py-2.5 rounded-xl text-xs font-black transition-all group",
               activeTab === "archived" ? "bg-white text-amber-600 shadow-sm" : "text-slate-400 hover:text-slate-600"
             )}
           >
-            <Archive size={16} />
+            <Archive size={14} className={cn("transition-colors", activeTab === "archived" ? "text-amber-600" : "text-slate-300 group-hover:text-slate-400")} />
             Archivados
-            <span className="ml-1 opacity-50 font-medium text-[10px]">{stats.archived}</span>
+            <span className={cn(
+              "ml-1 px-2 py-0.5 rounded-md text-[10px] font-bold transition-all",
+              activeTab === "archived" ? "bg-amber-600 text-white" : "bg-slate-200 text-slate-500"
+            )}>{stats.archived}</span>
           </Tabs.Trigger>
         </Tabs.List>
 
@@ -144,21 +190,24 @@ export default function ClientsListPage() {
                   href={`/dashboard/clients/${c.id}`}
                   className={cn(
                     "group bg-white border border-slate-200 rounded-[2.5rem] p-8 hover:shadow-2xl transition-all flex flex-col justify-between relative overflow-hidden",
-                    activeTab === 'archived' ? "opacity-75 grayscale-[0.5] hover:opacity-100 hover:grayscale-0" : "hover:border-blue-200 hover:shadow-blue-500/5"
+                    c.status === 'archived' ? "opacity-75 grayscale-[0.5] hover:opacity-100 hover:grayscale-0" : "hover:border-blue-200 hover:shadow-blue-500/5"
                   )}
                 >
                   <div>
                     <div className="flex justify-between items-start mb-6">
                       <div className={cn(
                         "w-14 h-14 rounded-2xl flex items-center justify-center transition-all duration-500 group-hover:scale-110",
-                        activeTab === 'active' ? "bg-blue-50 text-blue-600" : "bg-amber-50 text-amber-600"
+                        c.status !== 'archived' ? "bg-blue-50 text-blue-600" : "bg-amber-50 text-amber-600"
                       )}>
                         <Building2 size={28} />
                       </div>
                       <ExternalLink size={18} className="text-slate-200 group-hover:text-blue-400 transition-colors" />
                     </div>
                     
-                    <h3 className="text-2xl font-black text-slate-900 mb-1 tracking-tight group-hover:text-blue-600 transition-colors">
+                    <h3 
+                      className="text-2xl font-black text-slate-900 mb-1 tracking-tight group-hover:text-blue-600 transition-colors line-clamp-2 leading-tight h-[3.5rem] flex items-end"
+                      title={c.name}
+                    >
                       {c.name}
                     </h3>
                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-6">
@@ -185,12 +234,26 @@ export default function ClientsListPage() {
                     <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">
                       {new Date(c.created_at).toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })}
                     </span>
-                    <span className={cn(
-                      "text-xs font-bold",
-                      activeTab === 'active' ? "text-blue-600" : "text-amber-600"
-                    )}>
-                      Ver Ficha
-                    </span>
+                    <div className="flex items-center gap-3">
+                      {c.status !== 'archived' && (
+                        <button 
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setConfirmArchive({ open: true, id: c.id, name: c.name });
+                          }}
+                          className="p-2 text-slate-200 hover:text-amber-600 hover:bg-amber-50 rounded-xl transition-all"
+                        >
+                          <Archive size={16} />
+                        </button>
+                      )}
+                      <span className={cn(
+                        "text-xs font-bold",
+                        c.status !== 'archived' ? "text-blue-600" : "text-amber-600"
+                      )}>
+                        Ver Ficha
+                      </span>
+                    </div>
                   </div>
                 </Link>
               ))}
@@ -198,6 +261,17 @@ export default function ClientsListPage() {
           )}
         </Tabs.Content>
       </Tabs.Root>
+
+      <ConfirmDialog 
+        open={confirmArchive.open}
+        onOpenChange={(open: boolean) => setConfirmArchive({ ...confirmArchive, open })}
+        title="Archivar Cliente"
+        description={`¿Estás seguro de que deseas archivar a ${confirmArchive.name}? Podrás recuperarlo más tarde desde la pestaña de archivados.`}
+        confirmText="Archivar cliente"
+        variant="warning"
+        loading={archiving}
+        onConfirm={handleArchive}
+      />
     </div>
   );
 }

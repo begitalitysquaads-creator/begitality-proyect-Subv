@@ -1,156 +1,147 @@
+"use client";
+
+import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
-import {
-  PlusCircle,
-  FileText,
-  ChevronRight,
-  Wand2,
+import { 
+  PlusCircle, FileText, ChevronRight, Wand2, Search, 
+  Calendar, Users, Loader2, Sparkles 
 } from "lucide-react";
-import { createClient } from "@/lib/supabase/server";
-import { redirect } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
+import { cn } from "@/lib/utils";
+import { ProjectCard } from "@/components/project/ProjectCard";
 
-export default async function DashboardPage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+export default function DashboardPage() {
+  const [projects, setProjects] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [userName, setUserName] = useState("");
+  
+  const supabase = createClient();
 
-  const { data: projects } = await supabase
-    .from("projects")
-    .select("id, name, grant_name, status, updated_at")
-    .eq("user_id", user.id)
-    .not("status", "in", "(archived,exported)") // Excluimos archivados y finalizados
-    .order("updated_at", { ascending: false })
-    .limit(10);
+  useEffect(() => {
+    async function loadDashboardData() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      
+      setUserName(user.user_metadata?.full_name?.split(" ")[0] ?? "Consultor");
 
-  const recentProjects = projects?.slice(0, 2) ?? [];
-  const otherProjects = projects?.slice(2) ?? [];
+      // Cargar todos los proyectos activos (Visibilidad total Begitality)
+      const { data } = await supabase
+        .from("projects")
+        .select(`
+          id, 
+          name, 
+          grant_name, 
+          status, 
+          created_at, 
+          updated_at,
+          collaborators:project_collaborators (
+            profiles!user_id (
+              avatar_url,
+              full_name
+            )
+          )
 
-  const readyCount = projects?.filter((p) => p.status === "ready_export").length ?? 0;
-  const greeting =
-    readyCount > 0
-      ? `Tienes ${readyCount} memoria${readyCount > 1 ? "s" : ""} lista${readyCount > 1 ? "s" : ""} para exportar.`
-      : "Gestiona tus memorias técnicas desde aquí.";
+        `)
+        .not("status", "in", "(archived,exported)")
+        .order("updated_at", { ascending: false });
+
+      setProjects(data || []);
+      setLoading(false);
+    }
+    loadDashboardData();
+  }, [supabase]);
+
+  const filteredProjects = useMemo(() => {
+    const s = search.toLowerCase().trim();
+    return projects.filter(p => 
+      p.name.toLowerCase().includes(s) || 
+      p.grant_name.toLowerCase().includes(s)
+    );
+  }, [projects, search]);
+
+  const recentProjects = filteredProjects.slice(0, 2);
+  const otherProjects = filteredProjects.slice(2);
+
+  const readyCount = projects.filter((p) => p.status === "ready_export").length;
+  const greeting = readyCount > 0
+    ? `Tienes ${readyCount} memoria${readyCount > 1 ? "s" : ""} lista${readyCount > 1 ? "s" : ""} para exportar.`
+    : "Gestiona tus memorias técnicas y expedientes desde aquí.";
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <Loader2 className="animate-spin text-blue-600" size={32} />
+      </div>
+    );
+  }
 
   return (
-    <div className="max-w-5xl mx-auto space-y-12 animate-in fade-in duration-700">
-      <header className="flex justify-between items-end">
-        <div>
+    <div className="max-w-5xl mx-auto space-y-12 animate-in fade-in duration-700 pb-20">
+      <header className="flex flex-col md:flex-row justify-between items-end gap-6">
+        <div className="space-y-1">
           <h1 className="text-5xl font-black text-slate-900 tracking-tighter">
-            Hola, {user.user_metadata?.full_name?.split(" ")[0] ?? "Consultor"}
+            Hola, {userName}
           </h1>
-          <p className="text-slate-500 font-medium mt-2 text-lg">{greeting}</p>
+          <p className="text-slate-500 font-medium text-lg">{greeting}</p>
         </div>
-        <Link
-          href="/dashboard/projects/new"
-          className="p-3 bg-white border border-slate-200 rounded-2xl text-slate-400 hover:text-blue-600 transition-all shadow-sm"
-          aria-label="Nuevo proyecto"
-        >
-          <PlusCircle size={24} />
-        </Link>
+        
+        <div className="flex items-center gap-4 w-full md:w-auto">
+          <div className="relative flex-1 md:w-80 group">
+            <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
+            <input
+              type="text"
+              placeholder="Buscar proyecto activo..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full pl-12 pr-4 py-3.5 rounded-2xl border border-slate-200 bg-white focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 outline-none transition-all text-sm font-bold shadow-sm"
+            />
+          </div>
+          <Link
+            href="/dashboard/projects/new"
+            className="p-3.5 bg-blue-600 text-white rounded-2xl hover:bg-blue-500 transition-all shadow-lg shadow-blue-600/20 active:scale-95"
+          >
+            <PlusCircle size={24} />
+          </Link>
+        </div>
       </header>
 
       {/* SECCIÓN RECIENTES */}
       <section className="space-y-6">
-        <h2 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-3">
-          <span className="w-8 h-px bg-slate-200"></span>
-          Últimos Trabajos
+        <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] flex items-center gap-3">
+          <div className="w-8 h-px bg-slate-200"></div>
+          Últimas Memorias en Curso
         </h2>
+        
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           {recentProjects.map((project) => (
-            <Link
-              key={project.id}
-              href={
-                project.status === "ready_export"
-                  ? `/dashboard/projects/${project.id}/export`
-                  : `/dashboard/projects/${project.id}`
-              }
-              className="group relative bg-white border border-slate-200 p-8 rounded-[2.5rem] shadow-sm hover:shadow-2xl hover:shadow-blue-500/10 hover:-translate-y-2 transition-all cursor-pointer overflow-hidden"
-            >
-              <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50 rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-700 opacity-50" />
-              <div className="relative">
-                <div className="flex justify-between items-start mb-12">
-                  <div className="p-4 bg-blue-600 text-white rounded-2xl shadow-lg shadow-blue-600/30 group-hover:rotate-12 transition-transform">
-                    <FileText size={32} />
-                  </div>
-                  {project.status === "ready_export" && (
-                    <span className="bg-emerald-100 text-emerald-700 text-[10px] font-black px-4 py-1.5 rounded-full uppercase tracking-widest">
-                      Listo para Envío
-                    </span>
-                  )}
-                </div>
-                <h3 className="text-3xl font-black text-slate-900 mb-2 leading-tight">
-                  {project.name}
-                </h3>
-                <p className="text-slate-400 font-bold text-sm uppercase tracking-wider mb-6">
-                  {project.grant_name}
-                </p>
-                <div className="flex items-center justify-between">
-                  <div className="flex -space-x-2">
-                    {[1, 2, 3].map((i) => (
-                      <div
-                        key={i}
-                        className="w-8 h-8 rounded-full border-2 border-white bg-slate-200 flex items-center justify-center text-[10px] font-bold text-slate-500"
-                      >
-                        AI
-                      </div>
-                    ))}
-                  </div>
-                  <div className="flex items-center gap-2 text-blue-600 font-black text-sm">
-                    {project.status === "ready_export"
-                      ? "Revisar y Exportar"
-                      : "Continuar"}
-                    <ChevronRight size={16} />
-                  </div>
-                </div>
-              </div>
-            </Link>
+            <ProjectCard key={project.id} project={project} variant="large" />
           ))}
 
-          {recentProjects.length < 2 && (
+          {filteredProjects.length < 2 && !search && (
             <Link
               href="/dashboard/projects/new"
-              className="border-2 border-dashed border-slate-200 rounded-[2.5rem] flex flex-col items-center justify-center text-slate-400 group hover:border-blue-400 hover:bg-white transition-all cursor-pointer min-h-[280px]"
+              className="border-2 border-dashed border-slate-200 rounded-[2.5rem] flex flex-col items-center justify-center text-slate-400 group hover:border-blue-400 hover:bg-white transition-all cursor-pointer min-h-[320px]"
             >
-              <div className="p-4 bg-slate-50 rounded-full group-hover:bg-blue-50 group-hover:text-blue-600 transition-all">
+              <div className="p-5 bg-slate-50 rounded-full group-hover:bg-blue-50 group-hover:text-blue-600 transition-all group-hover:scale-110">
                 <Wand2 size={40} />
               </div>
-              <span className="mt-4 font-bold">Crear nueva memoria</span>
+              <span className="mt-4 font-black uppercase tracking-widest text-xs">Nueva Memoria Técnica</span>
             </Link>
           )}
         </div>
       </section>
 
-      {/* RESTO DE PROYECTOS */}
+      {/* EXPLORAR OTROS */}
       {otherProjects.length > 0 && (
-        <section className="space-y-6 pt-4">
-          <h2 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-3">
-            <span className="w-8 h-px bg-slate-200"></span>
-            Explorar otros
+        <section className="space-y-6">
+          <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] flex items-center gap-3">
+            <div className="w-8 h-px bg-slate-200"></div>
+            Resto de Proyectos
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {otherProjects.map((project) => (
-              <Link
-                key={project.id}
-                href={`/dashboard/projects/${project.id}`}
-                className="bg-white border border-slate-200 p-6 rounded-3xl shadow-sm hover:border-blue-200 transition-all group"
-              >
-                <div className="p-3 bg-slate-50 rounded-xl w-fit mb-4 group-hover:bg-blue-50 group-hover:text-blue-600 transition-colors">
-                  <FileText size={20} />
-                </div>
-                <h4 className="font-bold text-slate-900 truncate mb-1">
-                  {project.name}
-                </h4>
-                <p className="text-xs text-slate-400 font-bold uppercase truncate">
-                  {project.grant_name}
-                </p>
-                <div className="mt-4 flex justify-between items-center">
-                   <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">
-                    {new Date(project.updated_at).toLocaleDateString()}
-                  </span>
-                  <ChevronRight size={14} className="text-slate-300 group-hover:text-blue-500" />
-                </div>
-              </Link>
+              <ProjectCard key={project.id} project={project} variant="compact" />
             ))}
           </div>
         </section>

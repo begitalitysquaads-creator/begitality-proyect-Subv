@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Building2, User, Mail, Phone, ExternalLink, RefreshCw, Archive, RotateCcw, UserPlus } from "lucide-react";
+import { ArrowLeft, Building2, User, Mail, Phone, ExternalLink, RefreshCw, Archive, RotateCcw, UserPlus, FileText, TrendingUp, Database, AlertTriangle, HelpCircle, Calendar, Users } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { CargarBasesConvocatoria } from "@/components/project/CargarBasesConvocatoria";
 import { SeccionesMemoria } from "@/components/project/SeccionesMemoria";
@@ -8,9 +8,20 @@ import { AnalisisViabilidadIA } from "@/components/project/AnalisisViabilidadIA"
 import { MasterChatIA } from "@/components/project/MasterChatIA";
 import { ClientSelector } from "@/components/project/ClientSelector";
 import { ProjectReview } from "@/components/project/ProjectReview";
+import { ProjectAnalytics } from "@/components/project/ProjectAnalytics";
+import { AuditLogViewer } from "@/components/project/AuditLogViewer";
+import { BudgetManager } from "@/components/project/BudgetManager";
+import { ProjectHealth } from "@/components/project/ProjectHealth";
+import { IngestButton } from "@/components/project/IngestButton";
+import { SmartRoadmap } from "@/components/project/SmartRoadmap";
+import { IAContextPanel } from "@/components/project/IAContextPanel";
+import { HelpGuide } from "@/components/project/HelpGuide";
+import { CollaboratorManager } from "@/components/project/CollaboratorManager";
+import { ProjectHeaderActions } from "@/components/project/ProjectHeaderActions";
+import { BackButton } from "@/components/ui/BackButton";
 import { cn } from "@/lib/utils";
-import { revalidatePath } from "next/cache";
 
+// Workspace de Gestión Técnica de Proyectos (Begitality 2026)
 export default async function ProjectWorkspacePage({
   params,
 }: {
@@ -28,7 +39,6 @@ export default async function ProjectWorkspacePage({
     .from("projects")
     .select("*, clients(*)")
     .eq("id", id)
-    .eq("user_id", user.id)
     .single();
 
   if (!project) notFound();
@@ -40,8 +50,7 @@ export default async function ProjectWorkspacePage({
     await supabase
       .from("projects")
       .update({ updated_at: new Date().toISOString() })
-      .eq("id", id)
-      .eq("user_id", user.id);
+      .eq("id", id);
   }
 
   const { data: sections } = await supabase
@@ -60,22 +69,57 @@ export default async function ProjectWorkspacePage({
   const { data: clients } = await supabase
     .from("clients")
     .select("id, name")
-    .eq("user_id", user.id)
     .eq("status", "active")
     .order("name");
+
+  // Fetch Budget Data
+  const { data: budgets } = await supabase
+    .from("project_budgets")
+    .select("amount")
+    .eq("project_id", id);
+  const budgetTotal = budgets?.reduce((acc, curr) => acc + Number(curr.amount), 0) || 0;
+
+  // Fetch Tasks Pending
+  const { count: tasksPending } = await supabase
+    .from("project_tasks")
+    .select("*", { count: 'exact', head: true })
+    .eq("project_id", id)
+    .neq("status", "completed");
+
+  // Check Embeddings
+  const { count: embeddingsCount } = await supabase
+    .from("document_embeddings")
+    .select("*", { count: 'exact', head: true })
+    .eq("project_id", id);
+  const docsIndexed = (embeddingsCount || 0) > 0;
+
+  let viabilityScore = null;
+  try {
+    if (project.viability_report) {
+      const report = JSON.parse(project.viability_report);
+      viabilityScore = report.probability || null;
+    }
+  } catch (e) {}
+
+  const stats = {
+    sectionsCompleted: sections?.filter(s => s.is_completed).length || 0,
+    totalSections: sections?.length || 0,
+    viabilityScore,
+    budgetTotal,
+    tasksPending: tasksPending || 0,
+    docsIndexed
+  };
 
   const client = project.clients;
 
   return (
-    <div className="max-w-5xl mx-auto space-y-8 animate-in fade-in duration-500 pb-20">
-      <header className="flex justify-between items-center">
+    <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in duration-500 pb-20">
+      <header className="flex justify-between items-center flex-wrap gap-4">
         <div className="flex items-center gap-4">
-          <Link
-            href="/dashboard"
-            className="p-2 hover:bg-white rounded-full border border-slate-200 transition-all"
-          >
-            <ArrowLeft size={20} />
-          </Link>
+          <BackButton 
+            variant="minimal" 
+            className="p-2 hover:bg-white rounded-full border border-slate-200 transition-all" 
+          />
           <div>
             <div className="flex items-center gap-3">
               <h1 className="text-2xl font-black text-slate-900 tracking-tighter">{project.name}</h1>
@@ -85,8 +129,13 @@ export default async function ProjectWorkspacePage({
                 </span>
               )}
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
               <p className="text-slate-500 text-sm font-medium">{project.grant_name}</p>
+              <div className="w-1 h-1 rounded-full bg-slate-200" />
+              <div className="flex items-center gap-1.5 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                <Calendar size={12} className="text-slate-300" />
+                {new Date(project.created_at).toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' })}
+              </div>
               {client && (
                 <span className="text-[10px] bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full font-black uppercase tracking-widest">
                   {client.name}
@@ -96,28 +145,18 @@ export default async function ProjectWorkspacePage({
           </div>
         </div>
 
-        <form action={async () => {
-          "use server";
-          const sb = await createClient();
-          const nextStatus = isArchived ? 'draft' : 'archived';
-          await sb.from("projects").update({ status: nextStatus }).eq("id", id);
-          revalidatePath(`/dashboard/projects/${id}`);
-          revalidatePath("/dashboard");
-        }}>
-          <button 
-            type="submit"
-            className={cn(
-              "flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-xs transition-all border shadow-sm",
-              isArchived 
-                ? "bg-blue-50 border-blue-100 text-blue-600 hover:bg-blue-100" 
-                : "bg-white border-slate-200 text-slate-400 hover:text-amber-600 hover:border-amber-100"
-            )}
-          >
-            {isArchived ? <RotateCcw size={16} /> : <Archive size={16} />}
-            {isArchived ? "Restaurar Proyecto" : "Archivar Proyecto"}
-          </button>
-        </form>
+        <div className="flex items-center gap-3">
+           <HelpGuide />
+           <ProjectHeaderActions 
+             projectId={id}
+             projectName={project.name}
+             isArchived={isArchived}
+           />
+        </div>
       </header>
+
+      {/* Project Health Dashboard */}
+      <ProjectHealth stats={stats} />
 
       {/* Grid Principal con Sticky Sidebar */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start relative">
@@ -126,7 +165,12 @@ export default async function ProjectWorkspacePage({
           <CargarBasesConvocatoria
             projectId={id}
             files={convocatoriaFiles ?? []}
+            initialSummary={project.grant_summary}
           />
+
+          <SmartRoadmap projectId={id} />
+
+          <BudgetManager projectId={id} />
 
           <SeccionesMemoria
             projectId={id}
@@ -166,8 +210,32 @@ export default async function ProjectWorkspacePage({
                 <div className="space-y-6 relative z-10">
                   <div className="p-6 bg-slate-50/50 rounded-3xl border border-slate-100 shadow-inner">
                     <p className="font-black text-slate-900 text-2xl tracking-tighter leading-none mb-2">{client.name}</p>
-                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{client.tax_id || "ID PENDIENTE"}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{client.tax_id || "ID PENDIENTE"}</p>
+                      {client.industry && (
+                        <>
+                          <div className="w-1 h-1 rounded-full bg-slate-200" />
+                          <p className="text-[10px] text-blue-500 font-bold uppercase tracking-widest">{client.industry}</p>
+                        </>
+                      )}
+                    </div>
                   </div>
+
+                  {/* Persona de Contacto */}
+                  {(client.contact_name || client.contact_position) && (
+                    <div className="px-2 space-y-1">
+                      <p className="text-[8px] font-black text-slate-300 uppercase tracking-[0.2em] mb-2">Responsable del Proyecto</p>
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600 shadow-sm border border-blue-100">
+                          <User size={16} />
+                        </div>
+                        <div>
+                          <p className="text-xs font-black text-slate-900 leading-none">{client.contact_name || "Nombre no definido"}</p>
+                          <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-tighter">{client.contact_position || "Cargo pendiente"}</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   <div className="flex flex-wrap gap-2 pt-2">
                     {client.contact_email && (
@@ -201,6 +269,15 @@ export default async function ProjectWorkspacePage({
               </div>
             </div>
 
+            {/* Equipo de Trabajo */}
+            <CollaboratorManager projectId={id} />
+
+            {/* Contexto de Redacción IA */}
+            <IAContextPanel 
+              projectId={id}
+              initialInstructions={project.writing_instructions}
+            />
+
             {/* Análisis de Elegibilidad IA */}
             <AnalisisViabilidadIA 
               projectId={id} 
@@ -219,6 +296,9 @@ export default async function ProjectWorkspacePage({
             <MasterChatIA 
               projectId={id}
             />
+
+            {/* HISTORIAL DE ACTIVIDAD */}
+            <AuditLogViewer projectId={id} />
           </div>
         </div>
       </div>

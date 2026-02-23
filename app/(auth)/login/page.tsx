@@ -88,12 +88,20 @@ function LoginForm() {
             />
           </div>
           <div className="space-y-2">
-            <Label.Root
-              htmlFor="password"
-              className="text-sm font-bold text-slate-700"
-            >
-              Contraseña
-            </Label.Root>
+            <div className="flex justify-between items-center">
+              <Label.Root
+                htmlFor="password"
+                className="text-sm font-bold text-slate-700"
+              >
+                Contraseña
+              </Label.Root>
+              <Link 
+                href="/forgot-password"
+                className="text-xs font-bold text-blue-600 hover:text-blue-800 transition-colors"
+              >
+                ¿Olvidaste tu contraseña?
+              </Link>
+            </div>
             <input
               id="password"
               type="password"
@@ -115,12 +123,6 @@ function LoginForm() {
             {loading ? "Entrando…" : "Entrar"}
           </button>
         </form>
-        <p className="text-center text-slate-500 text-sm mt-6">
-          ¿No tienes cuenta?{" "}
-          <Link href="/signup" className="font-bold text-blue-600 hover:underline">
-            Regístrate
-          </Link>
-        </p>
       </div>
     </div>
   );

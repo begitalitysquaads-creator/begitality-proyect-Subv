@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
+import { chatModel } from "@/lib/ai";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -30,28 +30,7 @@ export async function POST(
   if (!sectionsContent) return NextResponse.json({ error: "No hay contenido para auditar." }, { status: 400 });
 
   // 2. IA Auditora
-  const geminiKey = process.env.GEMINI_API_KEY;
   try {
-    const genAI = new GoogleGenerativeAI(geminiKey!);
-    const model = genAI.getGenerativeModel({
-      model: "gemini-3-flash-preview",
-      generationConfig: {
-        responseMimeType: "application/json",
-        responseSchema: {
-          description: "Informe de auditoría de calidad de memoria técnica",
-          type: SchemaType.OBJECT,
-          properties: {
-            score: { type: SchemaType.INTEGER, description: "Puntuación de 0 a 100" },
-            summary: { type: SchemaType.STRING, description: "Resumen ejecutivo de la calidad" },
-            strengths: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
-            weaknesses: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
-            improvements: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING }, description: "Acciones concretas para mejorar" },
-          },
-          required: ["score", "summary", "strengths", "weaknesses", "improvements"],
-        },
-      },
-    }, { apiVersion: "v1beta" });
-
     const prompt = `Actúa como un Auditor Senior de Subvenciones Públicas.
     Evalúa la calidad técnica, coherencia y profundidad de la siguiente memoria.
     
@@ -65,7 +44,13 @@ export async function POST(
     ${sectionsContent}
     `;
 
-    const result = await model.generateContent(prompt);
+    const result = await chatModel.generateContent({
+      contents: [{ role: "user", parts: [{ text: prompt }] }],
+      generationConfig: {
+        responseMimeType: "application/json",
+      }
+    });
+    
     const response = await result.response;
     const auditData = JSON.parse(response.text());
 

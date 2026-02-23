@@ -123,6 +123,31 @@ export function MasterChatIA({ projectId }: { projectId: string }) {
 
   const selectedSectionTitle = sections.find(s => s.id === focusId)?.title;
 
+  const formatMessage = (text: string) => {
+    // Motor de renderizado Begitality v2: Compacto y Ejecutivo
+    let html = text
+      .trim()
+      // 1. Negritas
+      .replace(/\*\*(.*?)\*\*/g, '<strong class="font-black text-slate-900">$1</strong>')
+      
+      // 2. Cursivas
+      .replace(/\*(.*?)\*/g, '<em class="italic text-slate-600">$1</em>')
+      
+      // 3. Encabezados (Compactados)
+      .replace(/^#### (.*$)/gim, '<h5 class="text-[10px] font-black text-slate-700 mt-3 mb-1 uppercase tracking-widest border-l-2 border-blue-200 pl-2">$1</h5>')
+      .replace(/^### (.*$)/gim, '<h4 class="text-xs font-black text-slate-900 mt-4 mb-1 uppercase tracking-wider">$1</h4>')
+      .replace(/^## (.*$)/gim, '<h3 class="text-sm font-black text-slate-900 mt-4 mb-1 tracking-tight">$1</h3>')
+      .replace(/^# (.*$)/gim, '<h2 class="text-base font-black text-slate-900 mt-5 mb-2 tracking-tighter">$1</h2>')
+      
+      // 4. Listas (Gap optimizado)
+      .replace(/^[*-] (.*$)/gim, '<div class="flex gap-2 ml-1 mb-1 items-start"><span class="text-blue-500 font-bold mt-0.5 text-[10px]">•</span><span class="flex-1">$1</span></div>')
+      
+      // 5. Gestión de saltos de línea (evita dobles espacios vacíos)
+      .split(/\n\n+/).map(p => `<p class="mb-2 last:mb-0">${p.replace(/\n/g, '<br />')}</p>`).join('');
+    
+    return html;
+  };
+
   return (
     <div className="bg-white border border-slate-200 rounded-[2.5rem] shadow-sm flex flex-col h-[650px] relative overflow-hidden animate-in fade-in duration-700">
       
@@ -136,7 +161,7 @@ export function MasterChatIA({ projectId }: { projectId: string }) {
             <span className="text-xs font-black text-slate-900 uppercase tracking-widest">Begitality Assist</span>
             <div className="flex items-center gap-1.5 mt-0.5">
               <div className="w-1 h-1 bg-emerald-500 rounded-full animate-pulse" />
-              <span className="text-[8px] font-black text-blue-600 uppercase tracking-widest">Master Copilot Active</span>
+              <span className="text-[8px] font-black text-blue-600 uppercase tracking-widest">Copiloto Master Activo</span>
             </div>
           </div>
         </div>
@@ -153,12 +178,10 @@ export function MasterChatIA({ projectId }: { projectId: string }) {
       </div>
 
       {/* CHAT AREA */}
-      <div className="flex-1 overflow-y-auto p-8 space-y-8 bg-white/50 scroll-smooth
-        [&::-webkit-scrollbar]:w-1
-        [&::-webkit-scrollbar-track]:bg-transparent
-        [&::-webkit-scrollbar-thumb]:bg-slate-200
-        [&::-webkit-scrollbar-thumb]:rounded-full
-        hover:[&::-webkit-scrollbar-thumb]:bg-slate-300">
+      <div className={cn(
+        "flex-1 p-8 space-y-8 bg-white/50 scroll-smooth",
+        messages.length === 0 ? "overflow-hidden" : "overflow-y-auto"
+      )}>
         
         {messages.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center opacity-30 text-center px-10">
@@ -171,14 +194,15 @@ export function MasterChatIA({ projectId }: { projectId: string }) {
               "animate-in fade-in slide-in-from-bottom-2 duration-500",
               m.role === 'user' ? "flex flex-col items-end" : "flex flex-col items-start"
             )}>
-              <div className={cn(
-                "max-w-[90%] p-5 rounded-[1.8rem] text-[13px] leading-relaxed shadow-sm transition-all",
-                m.role === 'user' 
-                  ? "bg-slate-900 text-white rounded-tr-none" 
-                  : "bg-slate-50 text-slate-700 border border-slate-100 rounded-tl-none font-medium"
-              )}>
-                {m.content}
-              </div>
+              <div 
+                className={cn(
+                  "max-w-[90%] p-5 rounded-[1.8rem] text-[13px] leading-relaxed shadow-sm transition-all",
+                  m.role === 'user' 
+                    ? "bg-slate-900 text-white rounded-tr-none" 
+                    : "bg-slate-50 text-slate-700 border border-slate-100 rounded-tl-none font-medium"
+                )}
+                dangerouslySetInnerHTML={{ __html: m.role === 'assistant' ? formatMessage(m.content) : m.content }}
+              />
             </div>
           ))
         )}

@@ -19,6 +19,8 @@ import * as Dialog from "@radix-ui/react-dialog";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+
 interface AuditReport {
   score: number;
   summary: string;
@@ -31,6 +33,9 @@ export function ProjectReview({ projectId, initialReport, hasContent }: { projec
   const [analyzing, setAnalyzing] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
+  const [alertDialog, setAlertDialog] = useState<{open: boolean, title: string, description: string}>({
+    open: false, title: "", description: ""
+  });
   
   const [report, setReport] = useState<AuditReport | null>(() => {
     if (!initialReport) return null;
@@ -79,7 +84,11 @@ export function ProjectReview({ projectId, initialReport, hasContent }: { projec
       window.URL.revokeObjectURL(url);
     } catch (e) { 
       console.error(e);
-      alert("No se pudo generar el reporte oficial.");
+      setAlertDialog({
+        open: true,
+        title: "Error de generación",
+        description: "No se pudo generar el reporte oficial de calidad técnica en este momento."
+      });
     } finally {
       setIsDownloading(false);
     }
@@ -132,7 +141,7 @@ export function ProjectReview({ projectId, initialReport, hasContent }: { projec
             </div>
             <button 
               onClick={() => setIsOpen(true)}
-              className="w-full py-3 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-600 transition-all shadow-lg active:scale-95"
+              className="w-full py-4 bg-slate-900 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-blue-600 transition-all shadow-xl shadow-slate-900/10 active:scale-95 flex items-center justify-center gap-2"
             >
               Consultar Auditoría
             </button>
@@ -149,11 +158,12 @@ export function ProjectReview({ projectId, initialReport, hasContent }: { projec
               onClick={runAudit}
               disabled={analyzing || !hasContent}
               className={cn(
-                "w-full py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg active:scale-95",
-                hasContent ? "bg-blue-600 text-white hover:bg-blue-500" : "bg-slate-50 text-slate-300 border border-slate-100 cursor-not-allowed"
+                "w-full py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all shadow-xl active:scale-95 flex items-center justify-center gap-2",
+                hasContent ? "bg-blue-600 text-white hover:bg-blue-500 shadow-blue-600/20" : "bg-slate-50 text-slate-300 border border-slate-100 cursor-not-allowed"
               )}
             >
-              {analyzing ? <Loader2 size={14} className="animate-spin mx-auto" /> : "Ejecutar Auditoría IA"}
+              {analyzing ? <Loader2 size={16} className="animate-spin" /> : <Bot size={16} />}
+              {analyzing ? "Escaneando..." : "Ejecutar Auditoría IA"}
             </button>
           </div>
         )}
@@ -177,7 +187,7 @@ export function ProjectReview({ projectId, initialReport, hasContent }: { projec
               <button onClick={() => setIsOpen(false)} className="p-3 hover:bg-white rounded-2xl text-slate-400 transition-all shadow-sm border border-transparent hover:border-slate-100"><X size={20} /></button>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-10 space-y-10 scrollbar-hide bg-white">
+            <div className="flex-1 overflow-y-auto p-10 space-y-10 bg-white">
               {analyzing ? (
                 <div className="py-20 text-center space-y-6">
                   <Loader2 size={48} className="animate-spin text-blue-600 mx-auto" />
@@ -232,26 +242,37 @@ export function ProjectReview({ projectId, initialReport, hasContent }: { projec
               )}
             </div>
 
-            <div className="p-8 border-t border-slate-100 bg-slate-50/30 flex justify-between items-center">
+            <div className="p-10 border-t border-slate-100 bg-slate-50/50 flex justify-between items-center gap-4">
               <button 
                 onClick={runAudit}
                 disabled={analyzing}
-                className="px-6 py-3 bg-white border border-slate-200 text-slate-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-50 transition-all flex items-center gap-2"
+                className="px-8 py-4 bg-white border border-slate-200 text-slate-500 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-50 transition-all flex items-center gap-3 active:scale-95 shadow-sm"
               >
-                <RefreshCw size={12} className={cn(analyzing && "animate-spin")} /> Re-Auditar
+                <RefreshCw size={14} className={cn(analyzing && "animate-spin")} /> Re-Auditar
               </button>
               <button 
                 onClick={handleDownload}
                 disabled={isDownloading || !report}
-                className="px-8 py-3 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-600 transition-all shadow-lg flex items-center gap-2"
+                className="flex-1 px-8 py-4 bg-slate-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-600 transition-all shadow-xl shadow-slate-900/20 flex items-center justify-center gap-3 active:scale-95"
               >
-                {isDownloading ? <Loader2 size={14} className="animate-spin" /> : <ShieldCheck size={14} />}
-                {isDownloading ? "Generando..." : "Descargar Reporte Pro"}
+                {isDownloading ? <Loader2 size={16} className="animate-spin" /> : <Award size={16} />}
+                {isDownloading ? "Generando Reporte..." : "Descargar Reporte Oficial"}
               </button>
             </div>
           </Dialog.Content>
         </Dialog.Portal>
       </Dialog.Root>
+
+      <ConfirmDialog 
+        open={alertDialog.open}
+        onOpenChange={(open: boolean) => setAlertDialog({...alertDialog, open})}
+        title={alertDialog.title}
+        description={alertDialog.description}
+        confirmText="Entendido"
+        showCancel={false}
+        variant="danger"
+        onConfirm={() => setAlertDialog({...alertDialog, open: false})}
+      />
     </div>
   );
 }

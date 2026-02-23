@@ -8,13 +8,15 @@ import {
   Edit3, Trash2, Save, X, FileText, ChevronRight, Plus,
   Archive, RotateCcw, Link2, Loader2, CheckCircle2,
   Search, Target, Award, Clock, FileCheck, Layers,
-  BarChart3, Activity
+  BarChart3, Activity, Zap, Calendar, User
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Client, Project } from "@/lib/types";
 import * as Label from "@radix-ui/react-label";
 import * as Dialog from "@radix-ui/react-dialog";
 import * as Tabs from "@radix-ui/react-tabs";
+import { BackButton } from "@/components/ui/BackButton";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { cn } from "@/lib/utils";
 
 export default function ClientDetailsPage({ params }: { params: Promise<{ id: string }> }) {
@@ -30,12 +32,24 @@ export default function ClientDetailsPage({ params }: { params: Promise<{ id: st
   const [activeTab, setActiveTab] = useState("active");
   const [projectSearch, setProjectSearch] = useState("");
   
+  // Confirmation state
+  const [confirmArchive, setConfirmArchive] = useState({ open: false, type: 'archive' });
+  const [archiving, setArchiving] = useState(false);
+  
   const [formData, setFormData] = useState({
     name: "",
     tax_id: "",
     contact_email: "",
     contact_phone: "",
+    contact_name: "",
+    contact_position: "",
     industry: "",
+    cnae: "",
+    constitution_date: "",
+    fiscal_region: "",
+    annual_turnover: "",
+    employee_count: "",
+    de_minimis_received: "",
     notes: ""
   });
 
@@ -62,7 +76,15 @@ export default function ClientDetailsPage({ params }: { params: Promise<{ id: st
         tax_id: clientRes.data.tax_id || "",
         contact_email: clientRes.data.contact_email || "",
         contact_phone: clientRes.data.contact_phone || "",
+        contact_name: clientRes.data.contact_name || "",
+        contact_position: clientRes.data.contact_position || "",
         industry: clientRes.data.industry || "",
+        cnae: clientRes.data.cnae || "",
+        constitution_date: clientRes.data.constitution_date || "",
+        fiscal_region: clientRes.data.fiscal_region || "",
+        annual_turnover: clientRes.data.annual_turnover?.toString() || "0",
+        employee_count: clientRes.data.employee_count?.toString() || "0",
+        de_minimis_received: clientRes.data.de_minimis_received?.toString() || "0",
         notes: clientRes.data.notes || ""
       });
     }
@@ -77,7 +99,22 @@ export default function ClientDetailsPage({ params }: { params: Promise<{ id: st
   const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
-    const { error: err } = await supabase.from("clients").update({ name: formData.name, tax_id: formData.tax_id || null, contact_email: formData.contact_email || null, contact_phone: formData.contact_phone || null, industry: formData.industry || null, notes: formData.notes || null, }).eq("id", id);
+    const { error: err } = await supabase.from("clients").update({ 
+      name: formData.name, 
+      tax_id: formData.tax_id || null, 
+      contact_email: formData.contact_email || null, 
+      contact_phone: formData.contact_phone || null, 
+      contact_name: formData.contact_name || null,
+      contact_position: formData.contact_position || null,
+      industry: formData.industry || null, 
+      cnae: formData.cnae || null,
+      constitution_date: formData.constitution_date || null,
+      fiscal_region: formData.fiscal_region || null,
+      annual_turnover: formData.annual_turnover ? parseFloat(formData.annual_turnover) : 0,
+      employee_count: formData.employee_count ? parseInt(formData.employee_count) : 0,
+      de_minimis_received: formData.de_minimis_received ? parseFloat(formData.de_minimis_received) : 0,
+      notes: formData.notes || null, 
+    }).eq("id", id);
     if (err) setError(err.message);
     else { setIsEditing(false); loadData(); }
     setSaving(false);
@@ -85,9 +122,14 @@ export default function ClientDetailsPage({ params }: { params: Promise<{ id: st
 
   const handleArchive = async () => {
     const nextStatus = client.status === 'archived' ? 'active' : 'archived';
-    if (!confirm(nextStatus === 'archived' ? "¿Archivar?" : "¿Restaurar?")) return;
+    setArchiving(true);
     const { error: err } = await supabase.from("clients").update({ status: nextStatus }).eq("id", id);
-    if (err) setError(err.message); else loadData();
+    if (err) setError(err.message); 
+    else {
+      setConfirmArchive({ ...confirmArchive, open: false });
+      loadData();
+    }
+    setArchiving(false);
   };
 
   const linkProject = async (projectId: string) => {
@@ -96,14 +138,25 @@ export default function ClientDetailsPage({ params }: { params: Promise<{ id: st
   };
 
   const filteredProjects = useMemo(() => {
+    const search = projectSearch.toLowerCase().trim();
     return projects.filter(p => {
-      const matchesTab = activeTab === "active" ? p.status !== "archived" : p.status === "archived";
-      const matchesSearch = p.name.toLowerCase().includes(projectSearch.toLowerCase()) || p.grant_name.toLowerCase().includes(projectSearch.toLowerCase());
+      // 1. Filtrado por Pestaña
+      const matchesTab = 
+        activeTab === 'all' ? true :
+        activeTab === 'active' ? p.status !== 'archived' :
+        p.status === 'archived';
+
+      // 2. Filtrado por Búsqueda
+      const matchesSearch = 
+        p.name.toLowerCase().includes(search) || 
+        p.grant_name.toLowerCase().includes(search);
+
       return matchesTab && matchesSearch;
     });
   }, [projects, activeTab, projectSearch]);
 
   const stats = useMemo(() => ({
+    all: projects.length,
     active: projects.filter(p => p.status !== 'archived').length,
     archived: projects.filter(p => p.status === 'archived').length
   }), [projects]);
@@ -117,9 +170,10 @@ export default function ClientDetailsPage({ params }: { params: Promise<{ id: st
       {/* HEADER PREMIUM */}
       <header className="flex flex-col md:flex-row justify-between items-start md:items-center bg-white border border-slate-200 p-8 rounded-[3rem] shadow-sm gap-6">
         <div className="flex items-center gap-6">
-          <Link href="/dashboard/clients" className="p-4 bg-slate-50 hover:bg-white rounded-2xl border border-slate-100 transition-all shadow-sm group">
-            <ArrowLeft size={20} className="text-slate-400 group-hover:text-blue-600 transition-colors" />
-          </Link>
+          <BackButton 
+            variant="minimal" 
+            className="p-4 bg-slate-50 hover:bg-white rounded-2xl border border-slate-100 transition-all shadow-sm group" 
+          />
           <div>
             <div className="flex items-center gap-3">
               <h1 className="text-4xl font-black text-slate-900 tracking-tighter leading-none">{client.name}</h1>
@@ -128,7 +182,7 @@ export default function ClientDetailsPage({ params }: { params: Promise<{ id: st
             <div className="flex items-center gap-4 mt-3">
               <span className="text-[10px] font-black text-blue-600 uppercase tracking-[0.2em] bg-blue-50 px-3 py-1 rounded-full">{client.tax_id || "ID PENDIENTE"}</span>
               <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2">
-                <Clock size={12} /> Miembro desde {new Date(client.created_at).getFullYear()}
+                <Clock size={12} /> Miembro desde {new Date(client.created_at).toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })}
               </span>
             </div>
           </div>
@@ -137,7 +191,7 @@ export default function ClientDetailsPage({ params }: { params: Promise<{ id: st
           {!isEditing ? (
             <>
               <button onClick={() => setIsEditing(true)} className="flex items-center gap-2 px-6 py-3 bg-white border border-slate-200 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:border-blue-600 hover:text-blue-600 transition-all shadow-sm"><Edit3 size={16} /> Editar Perfil</button>
-              <button onClick={handleArchive} className={cn("p-3.5 rounded-2xl border transition-all", client.status === 'archived' ? "bg-blue-50 border-blue-100 text-blue-600" : "bg-white border-slate-200 text-slate-300 hover:text-amber-600")}>{client.status === 'archived' ? <RotateCcw size={20} /> : <Archive size={20} />}</button>
+              <button onClick={() => setConfirmArchive({ open: true, type: client.status === 'archived' ? 'restore' : 'archive' })} className={cn("p-3.5 rounded-2xl border transition-all", client.status === 'archived' ? "bg-blue-50 border-blue-100 text-blue-600" : "bg-white border-slate-200 text-slate-300 hover:text-amber-600")}>{client.status === 'archived' ? <RotateCcw size={20} /> : <Archive size={20} />}</button>
             </>
           ) : (
             <div className="flex gap-2">
@@ -165,16 +219,80 @@ export default function ClientDetailsPage({ params }: { params: Promise<{ id: st
                     <input value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all" required />
                   </div>
                 )}
-                {[ { label: "Identificación Fiscal", key: "tax_id" }, { label: "Sector de Negocio", key: "industry" }, { label: "Canal Email", key: "contact_email", type: "email" }, { label: "Contacto Telefónico", key: "contact_phone" } ].map((field) => (
+                {[ { label: "Identificación Fiscal", key: "tax_id" }, { label: "Sector de Negocio", key: "industry" } ].map((field) => (
                   <div key={field.key} className="space-y-2">
                     <Label.Root className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">{field.label}</Label.Root>
                     {isEditing ? (
-                      <input type={field.type || "text"} value={(formData as any)[field.key]} onChange={(e) => setFormData({...formData, [field.key]: e.target.value})} className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all" />
+                      <input value={(formData as any)[field.key]} onChange={(e) => setFormData({...formData, [field.key]: e.target.value})} className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all" />
                     ) : (
                       <p className="font-bold text-slate-900 bg-slate-50/30 px-5 py-4 rounded-2xl border border-slate-100/50">{(client as any)[field.key] || "—"}</p>
                     )}
                   </div>
                 ))}
+
+                {/* PERSONA DE CONTACTO */}
+                <div className="pt-4 space-y-6">
+                  <p className="text-[10px] font-black text-blue-600 uppercase tracking-[0.25em] border-b border-blue-50 pb-2">Persona de Contacto</p>
+                  {[ { label: "Nombre y Apellidos", key: "contact_name" }, { label: "Cargo / Puesto", key: "contact_position" } ].map((field) => (
+                    <div key={field.key} className="space-y-2">
+                      <Label.Root className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">{field.label}</Label.Root>
+                      {isEditing ? (
+                        <input value={(formData as any)[field.key]} onChange={(e) => setFormData({...formData, [field.key]: e.target.value})} className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all" />
+                      ) : (
+                        <p className="font-bold text-slate-900 bg-slate-50/30 px-5 py-4 rounded-2xl border border-slate-100/50">{(client as any)[field.key] || "—"}</p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                <div className="pt-4 space-y-6">
+                  <p className="text-[10px] font-black text-blue-600 uppercase tracking-[0.25em] border-b border-blue-50 pb-2">Perfil Técnico y Financiero</p>
+                  <div className="grid grid-cols-1 gap-6">
+                    {[ 
+                      { label: "Código CNAE", key: "cnae" }, 
+                      { label: "Fecha Constitución", key: "constitution_date", type: "date" },
+                      { label: "Región Fiscal", key: "fiscal_region" },
+                      { label: "Nº Empleados", key: "employee_count", type: "number" },
+                      { label: "Facturación Anual (€)", key: "annual_turnover", type: "number" },
+                      { label: "Ayudas De Minimis (€)", key: "de_minimis_received", type: "number" }
+                    ].map((field) => (
+                      <div key={field.key} className="space-y-2">
+                        <Label.Root className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">{field.label}</Label.Root>
+                        {isEditing ? (
+                          <input 
+                            type={field.type || "text"} 
+                            step={field.type === "number" ? "0.01" : undefined}
+                            value={(formData as any)[field.key]} 
+                            onChange={(e) => setFormData({...formData, [field.key]: e.target.value})} 
+                            className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all" 
+                          />
+                        ) : (
+                          <p className="font-bold text-slate-900 bg-slate-50/30 px-5 py-4 rounded-2xl border border-slate-100/50">
+                            {field.key === "constitution_date" && (client as any)[field.key] 
+                              ? new Date((client as any)[field.key]).toLocaleDateString()
+                              : (field.key === "annual_turnover" || field.key === "de_minimis_received")
+                                ? new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format((client as any)[field.key] || 0)
+                                : (client as any)[field.key] || "—"}
+                          </p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="pt-4 space-y-6">
+                  <p className="text-[10px] font-black text-blue-600 uppercase tracking-[0.25em] border-b border-blue-50 pb-2">Canales Directos</p>
+                  {[ { label: "Canal Email", key: "contact_email", type: "email" }, { label: "Contacto Telefónico", key: "contact_phone" } ].map((field) => (
+                    <div key={field.key} className="space-y-2">
+                      <Label.Root className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">{field.label}</Label.Root>
+                      {isEditing ? (
+                        <input type={field.type || "text"} value={(formData as any)[field.key]} onChange={(e) => setFormData({...formData, [field.key]: e.target.value})} className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all" />
+                      ) : (
+                        <p className="font-bold text-slate-900 bg-slate-50/30 px-5 py-4 rounded-2xl border border-slate-100/50">{(client as any)[field.key] || "—"}</p>
+                      )}
+                    </div>
+                  ))}
+                </div>
                 <div className="space-y-2">
                   <Label.Root className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Observaciones</Label.Root>
                   {isEditing ? (
@@ -191,21 +309,68 @@ export default function ClientDetailsPage({ params }: { params: Promise<{ id: st
         {/* COLUMNA DERECHA: DASHBOARD DE PROYECTOS */}
         <div className="lg:col-span-8 space-y-8">
           
-          {/* TOOLBAR INTEGRADA */}
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-6 bg-white border border-slate-200 p-4 rounded-3xl shadow-sm">
-            <Tabs.Root value={activeTab} onValueChange={setActiveTab} className="w-full sm:w-auto">
-              <Tabs.List className="flex gap-1 p-1 bg-slate-50 rounded-2xl w-fit border border-slate-100">
-                <Tabs.Trigger value="active" className={cn("px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all", activeTab === "active" ? "bg-white text-blue-600 shadow-sm" : "text-slate-400 hover:text-slate-600")}>Activos <span className="ml-2 opacity-40">{stats.active}</span></Tabs.Trigger>
-                <Tabs.Trigger value="archived" className={cn("px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all", activeTab === "archived" ? "bg-white text-amber-600 shadow-sm" : "text-slate-400 hover:text-slate-600")}>Histórico <span className="ml-2 opacity-40">{stats.archived}</span></Tabs.Trigger>
+          {/* TOOLBAR INTEGRADA COHESIVA */}
+          <div className="flex flex-col lg:flex-row items-center justify-between gap-6 bg-white border border-slate-200 p-2.5 rounded-[2rem] shadow-sm">
+            <Tabs.Root value={activeTab} onValueChange={setActiveTab} className="w-full lg:w-auto">
+              <Tabs.List className="flex gap-1 p-1 bg-slate-100/60 rounded-xl w-fit border border-slate-200/20 backdrop-blur-sm">
+                <Tabs.Trigger
+                  value="all"
+                  className={cn(
+                    "flex items-center gap-2 px-3.5 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all group",
+                    activeTab === "all" ? "bg-white text-slate-900 shadow-sm" : "text-slate-400 hover:text-slate-600"
+                  )}
+                >
+                  <Layers size={12} className={cn("transition-colors", activeTab === "all" ? "text-blue-600" : "text-slate-300 group-hover:text-slate-400")} />
+                  Todos
+                  <span className={cn(
+                    "ml-1 px-1.5 py-0.5 rounded text-[8px] font-bold transition-all",
+                    activeTab === "all" ? "bg-slate-900 text-white" : "bg-slate-200 text-slate-500"
+                  )}>{stats.all}</span>
+                </Tabs.Trigger>
+                <Tabs.Trigger
+                  value="active"
+                  className={cn(
+                    "flex items-center gap-2 px-3.5 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all group",
+                    activeTab === "active" ? "bg-white text-blue-600 shadow-sm" : "text-slate-400 hover:text-slate-600"
+                  )}
+                >
+                  <Zap size={12} className={cn("transition-colors", activeTab === "active" ? "text-blue-600" : "text-slate-300 group-hover:text-slate-400")} />
+                  Activos
+                  <span className={cn(
+                    "ml-1 px-1.5 py-0.5 rounded text-[8px] font-bold transition-all",
+                    activeTab === "active" ? "bg-blue-600 text-white" : "bg-slate-200 text-slate-500"
+                  )}>{stats.active}</span>
+                </Tabs.Trigger>
+                <Tabs.Trigger
+                  value="archived"
+                  className={cn(
+                    "flex items-center gap-2 px-3.5 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all group",
+                    activeTab === "archived" ? "bg-white text-amber-600 shadow-sm" : "text-slate-400 hover:text-slate-600"
+                  )}
+                >
+                  <Archive size={12} className={cn("transition-colors", activeTab === "archived" ? "text-amber-600" : "text-slate-300 group-hover:text-slate-400")} />
+                  Histórico
+                  <span className={cn(
+                    "ml-1 px-1.5 py-0.5 rounded text-[8px] font-bold transition-all",
+                    activeTab === "archived" ? "bg-amber-600 text-white" : "bg-slate-200 text-slate-500"
+                  )}>{stats.archived}</span>
+                </Tabs.Trigger>
               </Tabs.List>
             </Tabs.Root>
 
-            <div className="flex items-center gap-3 w-full sm:w-auto">
-              <div className="relative flex-1 sm:w-64 group">
-                <Search size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-blue-500 transition-colors" />
-                <input placeholder="Buscar memoria..." value={projectSearch} onChange={(e) => setProjectSearch(e.target.value)} className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl text-[11px] font-bold outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all shadow-inner" />
+            <div className="flex items-center gap-3 w-full lg:flex-1 lg:justify-end">
+              <div className="relative flex-1 max-w-xl group">
+                <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
+                <input 
+                  placeholder="Buscar" 
+                  value={projectSearch} 
+                  onChange={(e) => setProjectSearch(e.target.value)} 
+                  className="w-full pl-11 pr-4 py-2.5 rounded-xl border border-slate-100 bg-slate-50/50 focus:bg-white focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 outline-none transition-all text-[11px] font-black uppercase tracking-widest shadow-sm placeholder:text-slate-300" 
+                />
               </div>
-              <Link href={`/dashboard/projects/new?clientId=${id}`} className="p-3 bg-blue-600 text-white rounded-2xl shadow-lg shadow-blue-600/20 hover:bg-blue-500 transition-all active:scale-95"><Plus size={20} /></Link>
+              <Link href={`/dashboard/projects/new?clientId=${id}`} className="p-2.5 bg-blue-600 text-white rounded-xl shadow-lg shadow-blue-600/20 hover:bg-blue-500 transition-all active:scale-95 shrink-0 flex items-center justify-center">
+                <Plus size={20} />
+              </Link>
             </div>
           </div>
 
@@ -238,7 +403,7 @@ export default function ClientDetailsPage({ params }: { params: Promise<{ id: st
                     </div>
 
                     <h3 className="font-black text-slate-900 text-xl tracking-tight leading-tight group-hover:text-blue-600 transition-colors mb-2 line-clamp-2">{p.name}</h3>
-                    <div className="flex items-center gap-2 mb-4">
+                    <div className="flex flex-wrap items-center gap-2 mb-4">
                       <span className={cn("text-[8px] font-black uppercase tracking-[0.2em] px-2.5 py-1 rounded-full border flex items-center gap-1.5", 
                         p.status === 'exported' ? "bg-emerald-50 text-emerald-600 border-emerald-100" : 
                         p.status === 'archived' ? "bg-amber-50 text-amber-600 border-amber-100" : 
@@ -247,12 +412,17 @@ export default function ClientDetailsPage({ params }: { params: Promise<{ id: st
                         <div className={cn("w-1 h-1 rounded-full", p.status === 'archived' ? "bg-amber-400" : p.status === 'exported' ? "bg-emerald-500" : "bg-blue-500 animate-pulse")} />
                         {p.status === 'exported' ? 'Finalizado' : p.status === 'archived' ? 'Archivado' : 'En Curso'}
                       </span>
+                      {client.contact_name && (
+                        <span className="flex items-center gap-1 text-[8px] bg-slate-50 text-slate-400 px-2 py-1 rounded-full font-black uppercase tracking-widest border border-slate-100">
+                          <User size={10} /> {client.contact_name}
+                        </span>
+                      )}
                     </div>
                   </div>
 
                   <div className="flex items-center justify-between pt-6 border-t border-slate-50">
                     <div className="flex items-center gap-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                      <Calendar size={12} className="text-slate-200" />
+                      <Calendar size={12} className="text-slate-300" />
                       {new Date(p.updated_at).toLocaleDateString()}
                     </div>
                     <div className="w-8 h-8 bg-slate-50 rounded-xl flex items-center justify-center text-slate-300 group-hover:bg-blue-50 group-hover:text-blue-600 transition-all">
@@ -270,10 +440,20 @@ export default function ClientDetailsPage({ params }: { params: Promise<{ id: st
           </div>
         </div>
       </div>
+
+      <ConfirmDialog 
+        open={confirmArchive.open}
+        onOpenChange={(open: boolean) => setConfirmArchive({ ...confirmArchive, open })}
+        title={confirmArchive.type === 'archive' ? "Archivar Cliente" : "Restaurar Cliente"}
+        description={confirmArchive.type === 'archive' 
+          ? `¿Estás seguro de que deseas archivar a ${client.name}? El cliente se moverá al histórico pero sus datos se mantendrán a salvo.`
+          : `¿Deseas restaurar a ${client.name} para que vuelva a aparecer en el listado de clientes activos?`
+        }
+        confirmText={confirmArchive.type === 'archive' ? "Archivar ahora" : "Restaurar ahora"}
+        variant={confirmArchive.type === 'archive' ? "warning" : "info"}
+        loading={archiving}
+        onConfirm={handleArchive}
+      />
     </div>
   );
-}
-
-function Calendar({ size, className }: { size?: number; className?: string }) {
-  return <Clock size={size} className={className} />;
 }

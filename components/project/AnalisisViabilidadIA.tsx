@@ -6,11 +6,14 @@ import * as Dialog from "@radix-ui/react-dialog";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+
 interface ViabilityData {
   status: string;
   summary: string;
   strengths: string[];
   risks: string[];
+  critical_gaps: string[];
   recommendations: string[];
   probability: number;
 }
@@ -19,6 +22,9 @@ export function AnalisisViabilidadIA({ projectId, hasClient, initialReport }: { 
   const [analyzing, setAnalyzing] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
+  const [alertDialog, setAlertDialog] = useState<{open: boolean, title: string, description: string}>({
+    open: false, title: "", description: ""
+  });
   
   const [data, setData] = useState<ViabilityData | null>(() => {
     if (!initialReport) return null;
@@ -65,7 +71,11 @@ export function AnalisisViabilidadIA({ projectId, hasClient, initialReport }: { 
       window.URL.revokeObjectURL(url);
     } catch (e) {
       console.error(e);
-      alert("No se pudo generar el certificado oficial.");
+      setAlertDialog({
+        open: true,
+        title: "Error de descarga",
+        description: "No se pudo generar el certificado oficial de viabilidad en este momento."
+      });
     } finally {
       setIsDownloading(false);
     }
@@ -118,7 +128,7 @@ export function AnalisisViabilidadIA({ projectId, hasClient, initialReport }: { 
               <button onClick={() => setIsOpen(false)} className="p-3 hover:bg-white rounded-2xl text-slate-400 hover:text-slate-900 transition-all"><X size={20} /></button>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-10 space-y-8 scrollbar-hide bg-white">
+            <div className="flex-1 overflow-y-auto p-10 space-y-8 bg-white">
               {analyzing ? (
                 <div className="py-20 text-center space-y-6">
                   <Loader2 size={48} className="animate-spin text-blue-600 mx-auto" />
@@ -170,6 +180,23 @@ export function AnalisisViabilidadIA({ projectId, hasClient, initialReport }: { 
                     </div>
                   </div>
 
+                  {/* GAP ANALYSIS (Puntos Críticos) */}
+                  {data.critical_gaps && data.critical_gaps.length > 0 && (
+                    <div className="mb-10 p-8 bg-red-50 border border-red-100 rounded-[2.5rem] space-y-4">
+                      <h5 className="font-black text-[10px] text-red-600 uppercase tracking-[0.25em] flex items-center gap-2">
+                        <AlertTriangle size={14} /> Gap Analysis: Impedimentos detectados
+                      </h5>
+                      <div className="grid grid-cols-1 gap-3">
+                        {data.critical_gaps.map((gap, i) => (
+                          <div key={i} className="flex gap-3 items-start">
+                            <div className="w-1.5 h-1.5 bg-red-500 rounded-full mt-1.5 shrink-0" />
+                            <p className="text-xs text-red-900 font-bold leading-tight">{gap}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   <div className="p-8 bg-indigo-600 rounded-[2.5rem] text-white shadow-xl shadow-indigo-600/20">
                     <h5 className="font-black text-[10px] uppercase tracking-[0.2em] mb-4 flex items-center gap-2"><TrendingUp size={16} /> Hoja de Ruta Sugerida</h5>
                     <div className="space-y-3">
@@ -185,22 +212,37 @@ export function AnalisisViabilidadIA({ projectId, hasClient, initialReport }: { 
               )}
             </div>
 
-            <div className="p-8 border-t border-slate-100 bg-slate-50/30 flex justify-between items-center">
-              <button onClick={() => handleAnalyze(true)} className="px-6 py-3 bg-white border border-slate-200 text-slate-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-50 flex items-center gap-2" disabled={analyzing}>
-                <RefreshCw size={12} className={cn(analyzing && "animate-spin")} /> Re-Auditar
+            <div className="p-10 border-t border-slate-100 bg-slate-50/50 flex justify-between items-center gap-4">
+              <button 
+                onClick={() => handleAnalyze(true)} 
+                className="px-8 py-4 bg-white border border-slate-200 text-slate-500 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-50 flex items-center gap-3 transition-all active:scale-95 shadow-sm" 
+                disabled={analyzing}
+              >
+                <RefreshCw size={14} className={cn(analyzing && "animate-spin")} /> Re-Auditar Expediente
               </button>
               <button 
                 onClick={handleDownload} 
                 disabled={isDownloading}
-                className="px-8 py-3 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-indigo-600 transition-all shadow-lg flex items-center gap-2"
+                className="flex-1 px-8 py-4 bg-slate-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-indigo-600 transition-all shadow-xl shadow-slate-900/20 flex items-center justify-center gap-3 active:scale-95"
               >
-                {isDownloading ? <Loader2 size={14} className="animate-spin" /> : <ShieldCheck size={14} />}
+                {isDownloading ? <Loader2 size={16} className="animate-spin" /> : <ShieldCheck size={16} />}
                 {isDownloading ? "Generando PDF..." : "Descargar Certificado Oficial"}
               </button>
             </div>
           </Dialog.Content>
         </Dialog.Portal>
       </Dialog.Root>
+
+      <ConfirmDialog 
+        open={alertDialog.open}
+        onOpenChange={(open: boolean) => setAlertDialog({...alertDialog, open})}
+        title={alertDialog.title}
+        description={alertDialog.description}
+        confirmText="Entendido"
+        showCancel={false}
+        variant="danger"
+        onConfirm={() => setAlertDialog({...alertDialog, open: false})}
+      />
     </div>
   );
 }

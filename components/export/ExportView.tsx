@@ -1,9 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
-  ArrowLeft,
   FileText,
   Download,
   FileDown,
@@ -16,6 +15,10 @@ import {
   Loader2,
   CheckCircle2,
 } from "lucide-react";
+import { BackButton } from "@/components/ui/BackButton";
+import { StyledTooltip } from "@/components/ui/Tooltip";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+
 interface SectionData {
   id: string;
   title: string;
@@ -37,26 +40,30 @@ function ExportCard({
   title,
   icon: Icon,
   onClick,
+  tooltip
 }: {
   type: string;
   title: string;
   icon: React.ComponentType<{ size?: number }>;
   onClick: () => void;
+  tooltip: string;
 }) {
   return (
-    <button
-      onClick={onClick}
-      className="bg-white border border-slate-200 p-6 rounded-2xl flex items-center gap-4 hover:border-blue-500 hover:shadow-xl hover:shadow-blue-500/5 transition-all group w-full text-left"
-    >
-      <div className="p-3 bg-slate-50 rounded-xl group-hover:bg-blue-50 group-hover:text-blue-600 transition-colors">
-        <Icon size={24} />
-      </div>
-      <div className="flex-1">
-        <h4 className="font-bold text-slate-900">{title}</h4>
-        <p className="text-xs text-slate-500">Exportar formato oficial {type}</p>
-      </div>
-      <Download size={18} className="text-slate-300 group-hover:text-blue-500" />
-    </button>
+    <StyledTooltip content={tooltip} side="left">
+      <button
+        onClick={onClick}
+        className="bg-white border border-slate-200 p-6 rounded-2xl flex items-center gap-4 hover:border-blue-500 hover:shadow-xl hover:shadow-blue-500/5 transition-all group w-full text-left active:scale-[0.98]"
+      >
+        <div className="p-3 bg-slate-50 rounded-xl group-hover:bg-blue-50 group-hover:text-blue-600 transition-colors">
+          <Icon size={24} />
+        </div>
+        <div className="flex-1">
+          <h4 className="font-bold text-slate-900">{title}</h4>
+          <p className="text-xs text-slate-500">Exportar formato oficial {type}</p>
+        </div>
+        <Download size={18} className="text-slate-300 group-hover:text-blue-500" />
+      </button>
+    </StyledTooltip>
   );
 }
 
@@ -72,6 +79,9 @@ function downloadBlob(blob: Blob, filename: string) {
 export function ExportView({ project }: ExportViewProps) {
   const [isExporting, setIsExporting] = useState(false);
   const [exportComplete, setExportComplete] = useState(false);
+  const [alertDialog, setAlertDialog] = useState<{open: boolean, title: string, description: string}>({
+    open: false, title: "", description: ""
+  });
 
   const sections = project.sections ?? [];
   const completedSections = sections.filter(s => s.is_completed).length;
@@ -100,7 +110,11 @@ export function ExportView({ project }: ExportViewProps) {
       setExportComplete(true);
     } catch (e) {
       console.error(e);
-      alert(e instanceof Error ? e.message : "Error al exportar");
+      setAlertDialog({
+        open: true,
+        title: "Error al exportar",
+        description: e instanceof Error ? e.message : "Ocurrió un error inesperado al generar el archivo."
+      });
       setExportComplete(false);
     } finally {
       setIsExporting(false);
@@ -114,12 +128,10 @@ export function ExportView({ project }: ExportViewProps) {
     <div className="max-w-5xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <header className="flex justify-between items-center">
         <div className="flex items-center gap-4">
-          <Link
-            href={`/dashboard/projects/${project.id}`}
-            className="p-2 hover:bg-white rounded-full border border-slate-200 transition-all"
-          >
-            <ArrowLeft size={20} />
-          </Link>
+          <BackButton 
+            variant="minimal" 
+            className="p-2 hover:bg-white rounded-full border border-slate-200 transition-all shadow-sm" 
+          />
           <div>
             <h1 className="text-2xl font-black text-slate-900">
               Finalizar Memoria
@@ -138,6 +150,7 @@ export function ExportView({ project }: ExportViewProps) {
             <span className="flex items-center gap-2 bg-amber-50 text-amber-600 px-4 py-2 rounded-xl text-xs font-bold border border-amber-100">
               <Loader2 size={16} className="animate-spin" /> {progressPercent}% Completado
             </span>
+
           )}
         </div>
       </header>
@@ -153,14 +166,15 @@ export function ExportView({ project }: ExportViewProps) {
                 </span>
               </div>
               <div className="flex gap-2">
-                <button
-                  type="button"
-                  title="Imprimir"
-                  onClick={() => window.print()}
-                  className="p-2 hover:bg-white rounded-lg text-slate-400 hover:text-slate-600"
-                >
-                  <Printer size={18} />
-                </button>
+                <StyledTooltip content="Imprimir documento">
+                  <button
+                    type="button"
+                    onClick={() => window.print()}
+                    className="p-3 hover:bg-white rounded-2xl text-slate-400 hover:text-slate-900 transition-all shadow-sm border border-transparent hover:border-slate-100 active:scale-95"
+                  >
+                    <Printer size={20} />
+                  </button>
+                </StyledTooltip>
               </div>
             </div>
             <div className="flex-1 overflow-y-auto p-12 bg-slate-50/30">
@@ -261,12 +275,14 @@ export function ExportView({ project }: ExportViewProps) {
               title="Microsoft Word"
               icon={FileText}
               onClick={handleExportDocx}
+              tooltip="Descargar en formato editable .docx"
             />
             <ExportCard
               type=".pdf"
               title="Adobe PDF"
               icon={FileDown}
               onClick={handleExportPdf}
+              tooltip="Descargar en formato final .pdf"
             />
           </div>
 
@@ -281,6 +297,17 @@ export function ExportView({ project }: ExportViewProps) {
           )}
         </div>
       </div>
+
+      <ConfirmDialog 
+        open={alertDialog.open}
+        onOpenChange={(open: boolean) => setAlertDialog({...alertDialog, open})}
+        title={alertDialog.title}
+        description={alertDialog.description}
+        confirmText="Entendido"
+        showCancel={false}
+        variant="danger"
+        onConfirm={() => setAlertDialog({...alertDialog, open: false})}
+      />
     </div>
   );
 }

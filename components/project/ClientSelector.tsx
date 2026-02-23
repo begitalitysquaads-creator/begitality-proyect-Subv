@@ -98,11 +98,7 @@ export function ClientSelector({ projectId, initialClient, availableClients }: C
             </div>
           </div>
 
-          <div className="max-h-52 overflow-y-auto space-y-0.5 pr-1 scrollbar-thin
-            [&::-webkit-scrollbar]:w-1
-            [&::-webkit-scrollbar-track]:bg-transparent
-            [&::-webkit-scrollbar-thumb]:bg-slate-200
-            [&::-webkit-scrollbar-thumb]:rounded-full">
+          <div className="max-h-52 overflow-y-auto space-y-0.5 pr-1">
             
             <button 
               onClick={() => handleSelect(null)}
