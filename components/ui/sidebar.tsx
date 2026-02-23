@@ -12,6 +12,7 @@ import {
   LogOut,
   Shield,
   Settings,
+  CalendarDays,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
@@ -23,6 +24,7 @@ import * as ScrollArea from "@radix-ui/react-scroll-area";
 const navItems = [
   { href: "/dashboard", icon: LayoutDashboard, label: "Panel" },
   { href: "/dashboard/projects", icon: FileText, label: "Proyectos" },
+  { href: "/dashboard/calendar", icon: CalendarDays, label: "Calendario" },
   { href: "/dashboard/clients", icon: Users, label: "Clientes" },
   { href: "/dashboard/history", icon: Briefcase, label: "Histórico" },
 ];

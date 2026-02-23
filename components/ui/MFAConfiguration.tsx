@@ -31,13 +31,14 @@ export function MFAConfiguration() {
   const [loading, setLoading] = useState(true);
   const [enrolling, setEnrolling] = useState(false);
   const [qrCode, setQrCode] = useState<string | null>(null);
+  const [qrUri, setQrUri] = useState<string | null>(null);
   const [secretCode, setSecretCode] = useState<string | null>(null);
   const [factorId, setFactorId] = useState<string | null>(null);
   const [verifyCode, setVerifyCode] = useState("");
   const [verifying, setVerifying] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
-  
+
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [unenrollId, setUnenrollId] = useState<string | null>(null);
 
@@ -63,13 +64,13 @@ export function MFAConfiguration() {
     if (enrolling) return;
     setError(null);
     setEnrolling(true);
-    
+
     try {
       // SOLUCIÓN AL ERROR 422:
       // 1. Revisamos si hay factores 'unverified' que estén bloqueando el nuevo enrolamiento
       const { data: currentFactors } = await supabase.auth.mfa.listFactors();
       const unverified = currentFactors?.all.filter(f => f.status === 'unverified');
-      
+
       // 2. Si existen, los eliminamos para limpiar el canal
       if (unverified && unverified.length > 0) {
         for (const f of unverified) {
@@ -79,7 +80,7 @@ export function MFAConfiguration() {
 
       // 3. Ahora intentamos el enrolamiento limpio
       const { data, error: enrollError } = await supabase.auth.mfa.enroll({ factorType: 'totp' });
-      
+
       if (enrollError) {
         if (enrollError.message.includes("not enabled")) {
           throw new Error("MFA no está activado en el Dashboard de Supabase. Actívalo en Settings > Auth.");
@@ -89,6 +90,7 @@ export function MFAConfiguration() {
 
       if (data?.totp) {
         setQrCode(data.totp.qr_code);
+        setQrUri(data.totp.uri);
         setSecretCode(data.totp.secret);
         setFactorId(data.id);
       }
@@ -115,6 +117,7 @@ export function MFAConfiguration() {
       if (verifyError) throw verifyError;
 
       setQrCode(null);
+      setQrUri(null);
       setSecretCode(null);
       setFactorId(null);
       setVerifyCode("");
@@ -156,7 +159,7 @@ export function MFAConfiguration() {
 
   return (
     <div className="space-y-6">
-      <ConfirmDialog 
+      <ConfirmDialog
         open={isConfirmOpen} onOpenChange={setIsConfirmOpen}
         title="Desactivar 2FA" description="¿Confirmas la desactivación de la seguridad?"
         confirmText="Desactivar" variant="danger" onConfirm={handleUnenroll}
@@ -185,7 +188,7 @@ export function MFAConfiguration() {
                 </div>
               </div>
               <button onClick={startEnrollment} disabled={enrolling} className="px-8 py-4 bg-slate-900 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-blue-600 transition-all flex items-center gap-2 shadow-xl active:scale-95 disabled:opacity-50">
-                {enrolling ? <Loader2 className="animate-spin" size={16} /> : <QrCode size={16} />} 
+                {enrolling ? <Loader2 className="animate-spin" size={16} /> : <QrCode size={16} />}
                 {enrolling ? "Limpiando sesión..." : "Configurar 2FA"}
               </button>
             </div>
@@ -194,9 +197,14 @@ export function MFAConfiguration() {
               <div className="flex flex-col lg:flex-row gap-12 items-start">
                 <div className="space-y-6 shrink-0 mx-auto lg:mx-0">
                   <div className="bg-white p-6 rounded-[2.5rem] shadow-xl border border-slate-100 ring-8 ring-blue-500/5">
-                    <QRCodeErrorBoundary>
-                      <QRCodeCanvas value={qrCode || ""} size={180} level="L" includeMargin={false} />
-                    </QRCodeErrorBoundary>
+                    {qrUri ? (
+                      <QRCodeErrorBoundary>
+                        <QRCodeCanvas value={qrUri} size={180} level="L" includeMargin={false} />
+                      </QRCodeErrorBoundary>
+                    ) : qrCode ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={qrCode} alt="QR Code" width={180} height={180} className="rounded-xl" />
+                    ) : null}
                   </div>
                   <div className="bg-white/50 border border-slate-200 rounded-2xl p-4 space-y-2">
                     <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest text-center px-2">¿Problemas con el QR?</p>
@@ -219,7 +227,7 @@ export function MFAConfiguration() {
                   {error && <div className="p-4 bg-red-50 border border-red-100 rounded-2xl flex items-start gap-3 animate-in slide-in-from-top-2"><AlertCircle className="text-red-600 mt-0.5 shrink-0" size={16} /><p className="text-[10px] font-bold text-red-600 uppercase tracking-wider leading-relaxed">{error}</p></div>}
                   <div className="flex flex-col sm:flex-row gap-4 pt-2">
                     <button onClick={verifyAndActivate} disabled={verifying || verifyCode.length < 6} className="flex-grow py-5 bg-blue-600 text-white rounded-2xl font-black text-[11px] uppercase tracking-widest hover:bg-blue-700 shadow-xl shadow-blue-500/20 transition-all active:scale-95 flex items-center justify-center gap-3 disabled:opacity-50">{verifying ? <Loader2 className="animate-spin" size={18} /> : <CheckCircle2 size={18} />}{verifying ? "Activando..." : "Completar Activación"}</button>
-                    <button onClick={() => { setQrCode(null); setSecretCode(null); setFactorId(null); setError(null); setVerifyCode(""); }} className="px-8 py-5 bg-white border border-slate-200 text-slate-400 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:text-slate-600 transition-all active:scale-95">Cancelar</button>
+                    <button onClick={() => { setQrCode(null); setQrUri(null); setSecretCode(null); setFactorId(null); setError(null); setVerifyCode(""); }} className="px-8 py-5 bg-white border border-slate-200 text-slate-400 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:text-slate-600 transition-all active:scale-95">Cancelar</button>
                   </div>
                 </div>
               </div>
