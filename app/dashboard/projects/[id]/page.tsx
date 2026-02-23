@@ -4,11 +4,9 @@ import { ArrowLeft, Building2, User, Mail, Phone, ExternalLink, RefreshCw, Archi
 import { createClient } from "@/lib/supabase/server";
 import { CargarBasesConvocatoria } from "@/components/project/CargarBasesConvocatoria";
 import { SeccionesMemoria } from "@/components/project/SeccionesMemoria";
-import { AnalisisViabilidadIA } from "@/components/project/AnalisisViabilidadIA";
+import { DiagnosticPanel } from "@/components/project/DiagnosticPanel";
 import { MasterChatIA } from "@/components/project/MasterChatIA";
 import { ClientSelector } from "@/components/project/ClientSelector";
-import { ProjectReview } from "@/components/project/ProjectReview";
-import { ProjectAnalytics } from "@/components/project/ProjectAnalytics";
 import { AuditLogViewer } from "@/components/project/AuditLogViewer";
 import { BudgetManager } from "@/components/project/BudgetManager";
 import { ProjectHealth } from "@/components/project/ProjectHealth";
@@ -20,6 +18,7 @@ import { CollaboratorManager } from "@/components/project/CollaboratorManager";
 import { ProjectHeaderActions } from "@/components/project/ProjectHeaderActions";
 import { BackButton } from "@/components/ui/BackButton";
 import { cn } from "@/lib/utils";
+import type { ProjectDiagnostic } from "@/lib/types";
 
 // Workspace de Gestión Técnica de Proyectos (Begitality 2026)
 export default async function ProjectWorkspacePage({
@@ -93,18 +92,19 @@ export default async function ProjectWorkspacePage({
     .eq("project_id", id);
   const docsIndexed = (embeddingsCount || 0) > 0;
 
-  let viabilityScore = null;
-  try {
-    if (project.viability_report) {
-      const report = JSON.parse(project.viability_report);
-      viabilityScore = report.probability || null;
-    }
-  } catch (e) {}
+  // Fetch latest AI diagnostic
+  const { data: latestDiagnostic } = await supabase
+    .from("project_diagnostics")
+    .select("*")
+    .eq("project_id", id)
+    .order("generated_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
 
   const stats = {
     sectionsCompleted: sections?.filter(s => s.is_completed).length || 0,
     totalSections: sections?.length || 0,
-    viabilityScore,
+    viabilityScore: latestDiagnostic?.overall_score ?? null,
     budgetTotal,
     tasksPending: tasksPending || 0,
     docsIndexed
@@ -116,9 +116,9 @@ export default async function ProjectWorkspacePage({
     <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in duration-500 pb-20">
       <header className="flex justify-between items-center flex-wrap gap-4">
         <div className="flex items-center gap-4">
-          <BackButton 
-            variant="minimal" 
-            className="p-2 hover:bg-white rounded-full border border-slate-200 transition-all" 
+          <BackButton
+            variant="minimal"
+            className="p-2 hover:bg-white rounded-full border border-slate-200 transition-all"
           />
           <div>
             <div className="flex items-center gap-3">
@@ -146,12 +146,12 @@ export default async function ProjectWorkspacePage({
         </div>
 
         <div className="flex items-center gap-3">
-           <HelpGuide />
-           <ProjectHeaderActions 
-             projectId={id}
-             projectName={project.name}
-             isArchived={isArchived}
-           />
+          <HelpGuide />
+          <ProjectHeaderActions
+            projectId={id}
+            projectName={project.name}
+            isArchived={isArchived}
+          />
         </div>
       </header>
 
@@ -178,7 +178,7 @@ export default async function ProjectWorkspacePage({
             hasConvocatoriaFiles={(convocatoriaFiles?.length ?? 0) > 0}
           />
         </div>
-        
+
         {/* Columna Derecha: Inteligencia y Gestión (Fija) */}
         <div className="lg:col-span-1">
           <div className="space-y-6 lg:sticky lg:top-8">
@@ -196,11 +196,11 @@ export default async function ProjectWorkspacePage({
                   Cliente
                 </h3>
                 {client && (
-                  <Link 
+                  <Link
                     href={`/dashboard/clients/${client.id}`}
                     className="px-4 py-2 bg-blue-50 text-blue-600 rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-blue-600 hover:text-white transition-all shadow-sm flex items-center gap-2 group/btn"
                   >
-                    Ficha completa 
+                    Ficha completa
                     <ExternalLink size={12} className="group-hover/btn:translate-x-0.5 group-hover/btn:-translate-y-0.5 transition-transform" />
                   </Link>
                 )}
@@ -261,7 +261,7 @@ export default async function ProjectWorkspacePage({
               )}
 
               <div className="mt-8 relative z-20">
-                <ClientSelector 
+                <ClientSelector
                   projectId={id}
                   initialClient={client}
                   availableClients={clients || []}
@@ -273,27 +273,20 @@ export default async function ProjectWorkspacePage({
             <CollaboratorManager projectId={id} />
 
             {/* Contexto de Redacción IA */}
-            <IAContextPanel 
+            <IAContextPanel
               projectId={id}
               initialInstructions={project.writing_instructions}
             />
 
-            {/* Análisis de Elegibilidad IA */}
-            <AnalisisViabilidadIA 
-              projectId={id} 
-              hasClient={!!client} 
-              initialReport={project.viability_report}
-            />
-
-            {/* Auditoría de Calidad */}
-            <ProjectReview 
+            {/* Diagnóstico IA */}
+            <DiagnosticPanel
               projectId={id}
-              initialReport={project.review_report}
-              hasContent={(sections?.length ?? 0) > 0 && sections!.some((s) => s.content && s.content.length > 50)}
+              initialDiagnostic={latestDiagnostic as ProjectDiagnostic | null}
+              hasSections={(sections?.length ?? 0) > 0}
             />
 
             {/* MASTER CHAT IA */}
-            <MasterChatIA 
+            <MasterChatIA
               projectId={id}
             />
 
