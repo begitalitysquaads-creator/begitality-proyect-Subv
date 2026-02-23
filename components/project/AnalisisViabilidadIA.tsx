@@ -159,7 +159,7 @@ export function AnalisisViabilidadIA({ projectId, hasClient, initialReport }: { 
                     <div className="space-y-4">
                       <h5 className="font-black text-[10px] text-emerald-600 uppercase tracking-widest flex items-center gap-2">Puntos Favorables</h5>
                       <div className="space-y-2">
-                        {data.strengths.map((s, i) => (
+                        {(data.strengths || []).map((s, i) => (
                           <div key={i} className="text-[11px] text-slate-600 font-bold bg-emerald-50/50 p-4 rounded-2xl border border-emerald-100 flex items-start gap-3">
                             <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full mt-1.5 shrink-0" />
                             {s}
@@ -170,7 +170,7 @@ export function AnalisisViabilidadIA({ projectId, hasClient, initialReport }: { 
                     <div className="space-y-4">
                       <h5 className="font-black text-[10px] text-red-500 uppercase tracking-widest flex items-center gap-2">Riesgos Críticos</h5>
                       <div className="space-y-2">
-                        {data.risks.map((r, i) => (
+                        {(data.risks || []).map((r, i) => (
                           <div key={i} className="text-[11px] text-slate-600 font-bold bg-red-50/50 p-4 rounded-2xl border border-red-100 flex items-start gap-3">
                             <div className="w-1.5 h-1.5 bg-red-500 rounded-full mt-1.5 shrink-0" />
                             {r}
@@ -187,7 +187,7 @@ export function AnalisisViabilidadIA({ projectId, hasClient, initialReport }: { 
                         <AlertTriangle size={14} /> Gap Analysis: Impedimentos detectados
                       </h5>
                       <div className="grid grid-cols-1 gap-3">
-                        {data.critical_gaps.map((gap, i) => (
+                        {(data.critical_gaps || []).map((gap, i) => (
                           <div key={i} className="flex gap-3 items-start">
                             <div className="w-1.5 h-1.5 bg-red-500 rounded-full mt-1.5 shrink-0" />
                             <p className="text-xs text-red-900 font-bold leading-tight">{gap}</p>
@@ -200,7 +200,7 @@ export function AnalisisViabilidadIA({ projectId, hasClient, initialReport }: { 
                   <div className="p-8 bg-indigo-600 rounded-[2.5rem] text-white shadow-xl shadow-indigo-600/20">
                     <h5 className="font-black text-[10px] uppercase tracking-[0.2em] mb-4 flex items-center gap-2"><TrendingUp size={16} /> Hoja de Ruta Sugerida</h5>
                     <div className="space-y-3">
-                      {data.recommendations.map((rec, i) => (
+                      {(data.recommendations || []).map((rec, i) => (
                         <div key={i} className="flex gap-3 items-start bg-white/10 p-3 rounded-xl border border-white/10">
                           <div className="w-5 h-5 bg-white text-indigo-600 rounded flex items-center justify-center text-[10px] font-black shrink-0">{i+1}</div>
                           <p className="text-[11px] font-bold leading-tight">{rec}</p>

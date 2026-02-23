@@ -206,7 +206,7 @@ export function ProjectReview({ projectId, initialReport, hasContent }: { projec
                     <div className="space-y-4">
                       <h5 className="font-black text-[10px] text-emerald-600 uppercase tracking-widest flex items-center gap-2">Puntos Fuertes</h5>
                       <div className="space-y-2">
-                        {report.strengths.map((s, i) => (
+                        {(report.strengths || []).map((s, i) => (
                           <div key={i} className="text-[11px] text-slate-600 font-bold bg-emerald-50/50 p-4 rounded-2xl border border-emerald-100 flex items-start gap-3">
                             <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full mt-1.5 shrink-0" />
                             {s}
@@ -217,7 +217,7 @@ export function ProjectReview({ projectId, initialReport, hasContent }: { projec
                     <div className="space-y-4">
                       <h5 className="font-black text-[10px] text-red-500 uppercase tracking-widest flex items-center gap-2">Debilidades</h5>
                       <div className="space-y-2">
-                        {report.weaknesses.map((w, i) => (
+                        {(report.weaknesses || []).map((w, i) => (
                           <div key={i} className="text-[11px] text-slate-600 font-bold bg-red-50/50 p-4 rounded-2xl border border-red-100 flex items-start gap-3">
                             <div className="w-1.5 h-1.5 bg-red-500 rounded-full mt-1.5 shrink-0" />
                             {w}
@@ -230,7 +230,7 @@ export function ProjectReview({ projectId, initialReport, hasContent }: { projec
                   <div className="space-y-6">
                     <h5 className="font-black text-[10px] text-blue-600 uppercase tracking-widest flex items-center gap-2">Plan de Mejora Recomendado</h5>
                     <div className="grid grid-cols-1 gap-3">
-                      {report.improvements.map((imp, i) => (
+                      {(report.improvements || []).map((imp, i) => (
                         <div key={i} className="flex gap-5 p-6 bg-white border border-slate-100 rounded-[2rem] shadow-sm hover:shadow-md transition-all group">
                           <div className="w-10 h-10 bg-blue-50 rounded-2xl flex items-center justify-center text-xs font-black text-blue-600 shrink-0 group-hover:bg-blue-600 group-hover:text-white transition-colors">{i+1}</div>
                           <p className="text-xs text-slate-700 font-bold leading-relaxed">{imp}</p>

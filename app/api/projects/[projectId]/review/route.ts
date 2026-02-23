@@ -42,7 +42,15 @@ export async function POST(
 
     MEMORIA A AUDITAR:
     ${sectionsContent}
-    `;
+    
+    Responde estrictamente en formato JSON con el siguiente esquema:
+    {
+      "score": 85,
+      "summary": "Resumen de la auditoría",
+      "strengths": ["punto fuerte 1", "punto fuerte 2"],
+      "weaknesses": ["debilidad 1", "debilidad 2"],
+      "improvements": ["mejora 1", "mejora 2"]
+    }`;
 
     const result = await chatModel.generateContent({
       contents: [{ role: "user", parts: [{ text: prompt }] }],

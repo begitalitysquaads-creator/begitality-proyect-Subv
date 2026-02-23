@@ -58,7 +58,16 @@ export async function POST(
     2. Si detectas cualquier discrepancia, lístala en 'critical_gaps'.
     3. Calcula la 'probability' del 0 al 100. Solo pon 100 si no hay ningún gap crítico.
     
-    Responde estrictamente en formato JSON con el esquema solicitado.`;
+    Responde estrictamente en formato JSON con el siguiente esquema:
+    {
+      "status": "APTO" | "CONDICIONADO" | "NO APTO",
+      "summary": "Resumen ejecutivo del análisis",
+      "strengths": ["punto 1", "punto 2"],
+      "risks": ["riesgo 1", "riesgo 2"],
+      "critical_gaps": ["gap 1", "gap 2"],
+      "recommendations": ["recomendación 1", "recomendación 2"],
+      "probability": 85
+    }`;
 
     const result = await chatModel.generateContent({
       contents: [{ role: "user", parts: [{ text: prompt }] }],
