@@ -9,6 +9,9 @@ export interface Profile {
   full_name: string | null;
   avatar_url: string | null;
   role: UserRole;
+  phone_number: string | null;
+  bio: string | null;
+  last_login: string | null;
   created_at: string;
   updated_at: string;
 }

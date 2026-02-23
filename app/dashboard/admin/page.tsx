@@ -201,6 +201,14 @@ export default function AdminPage() {
     }
   };
 
+  const roleLabels: Record<string, string> = {
+    admin: "Administrador",
+    senior_consultant: "Consultor Senior",
+    junior_consultant: "Consultor Junior",
+    auditor: "Auditor Técnico",
+    viewer: "Lector"
+  };
+
   const filteredUsers = users.filter(u => 
     u.full_name?.toLowerCase().includes(search.toLowerCase()) ||
     u.email?.toLowerCase().includes(search.toLowerCase())
@@ -318,14 +326,12 @@ export default function AdminPage() {
                     <div className="flex items-center gap-3">
                       <h3 className="text-xl font-black text-slate-900 tracking-tight">{u.full_name || "Pendiente de alta"}</h3>
                       <span className={cn(
-                        "text-[8px] font-black uppercase tracking-[0.25em] px-3 py-1.5 rounded-lg border",
-                        u.role === 'admin' ? "bg-slate-900 text-white border-slate-900" :
-                        u.role === 'auditor' ? "bg-amber-50 text-amber-600 border-amber-100" :
-                        u.role === 'senior_consultant' ? "bg-blue-50 text-blue-600 border-blue-100" :
-                        u.role === 'viewer' ? "bg-emerald-50 text-emerald-600 border-emerald-100" :
-                        "bg-slate-50 text-slate-400 border-slate-100"
+                        "text-[9px] font-black uppercase tracking-[0.2em] px-3 py-1.5 rounded-xl border shadow-sm",
+                        u.role === 'admin' 
+                          ? "bg-slate-900 text-white border-slate-900 shadow-slate-900/20" 
+                          : "bg-blue-50 text-blue-600 border-blue-100 shadow-blue-600/5"
                       )}>
-                        {u.role.replace('_', ' ')}
+                        {roleLabels[u.role] || u.role}
                       </span>
                       {currentUserId === u.id && (
                         <span className="text-[8px] font-black text-blue-600 bg-blue-50 px-2.5 py-1 rounded-full uppercase tracking-widest border border-blue-100/50 animate-pulse">Tú</span>
