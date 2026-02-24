@@ -20,29 +20,56 @@ export default function HistoryPage() {
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    let mounted = true;
+
     async function loadHistory() {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user || !mounted) return;
 
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("projects")
         .select("*, clients(*)")
-        .eq("user_id", user.id)
         .in("status", ["exported", "archived"])
         .order("updated_at", { ascending: false });
 
-      setProjects(data || []);
-      setLoading(false);
+      if (error) {
+        console.error("Error loading history:", error.message);
+      }
+
+      if (mounted) {
+        setProjects(data || []);
+        setLoading(false);
+      }
     }
+
     loadHistory();
+
+    // SUSCRIPCIÓN REALTIME
+    const channel = supabase
+      .channel('history-changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'projects' },
+        () => {
+          console.log("Detectado cambio en histórico, recargando...");
+          loadHistory();
+        }
+      )
+      .subscribe();
 
     const handleClickOutside = (event: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
         setOpenMenuId(null);
       }
     };
+
     document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    
+    return () => {
+      mounted = false;
+      supabase.removeChannel(channel);
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
   }, [supabase]);
 
   const downloadReport = async (projectId: string, projectName: string, format: string) => {
@@ -163,7 +190,7 @@ export default function HistoryPage() {
                     <div className="w-1 h-1 bg-slate-200 rounded-full" />
                     <div className="flex items-center gap-1.5 text-xs text-slate-500 font-bold">
                       <Calendar size={12} className="text-slate-300" />
-                      {new Date(p.updated_at).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}
+                      {new Date(p.updated_at).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' })}
                     </div>
                   </div>
                 </div>
