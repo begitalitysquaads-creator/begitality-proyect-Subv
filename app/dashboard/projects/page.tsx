@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo, useCallback } from "react";
 import Link from "next/link";
-import { PlusCircle, FileText, Search, Building2, ChevronRight, User, Zap, Archive, Layers, Calendar, Loader2, Clock } from "lucide-react";
+import { PlusCircle, FileText, Search, Building2, ChevronRight, User, Zap, Archive, Layers, Calendar, Loader2, Clock, ShieldCheck } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Project } from "@/lib/types";
 import * as Tabs from "@radix-ui/react-tabs";
