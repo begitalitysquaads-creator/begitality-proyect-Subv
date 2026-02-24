@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { extractTextFromPdf } from "@/lib/pdf-extract";
 import { chatModel } from "@/lib/ai";
+import { logAuditAction } from "@/lib/audit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -61,7 +62,14 @@ export async function POST(
         is_completed: false,
       }));
 
-    if (toInsert.length > 0) await supabase.from("sections").insert(toInsert);
+    if (toInsert.length > 0) {
+      await supabase.from("sections").insert(toInsert);
+      
+      await logAuditAction(projectId, user.id, "IA: Memoria", {
+        description: `generó la estructura de la memoria con ${toInsert.length} secciones nuevas.`,
+        sections_count: toInsert.length
+      });
+    }
 
     return NextResponse.json({ ok: true });
   } catch (error: any) {

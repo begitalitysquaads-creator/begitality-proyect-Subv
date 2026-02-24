@@ -14,9 +14,9 @@ export default function ClientsListPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [activeTab, setActiveTab] = useState("active");
-  
+
   // Confirmation state
-  const [confirmArchive, setConfirmArchive] = useState<{open: boolean, id: string, name: string}>({open: false, id: "", name: ""});
+  const [confirmArchive, setConfirmArchive] = useState<{ open: boolean, id: string, name: string }>({ open: false, id: "", name: "" });
   const [archiving, setArchiving] = useState(false);
 
   const supabase = createClient();
@@ -61,17 +61,17 @@ export default function ClientsListPage() {
     const s = search.toLowerCase().trim();
     return clients.filter(c => {
       // 1. Filtrado por Pestaña
-      const matchesTab = 
+      const matchesTab =
         activeTab === 'all' ? true :
-        activeTab === 'active' ? (c.status || 'active') === 'active' :
-        c.status === 'archived';
-        
+          activeTab === 'active' ? (c.status || 'active') === 'active' :
+            c.status === 'archived';
+
       // 2. Filtrado por Búsqueda
-      const matchesSearch = 
-        c.name.toLowerCase().includes(s) || 
+      const matchesSearch =
+        c.name.toLowerCase().includes(s) ||
         (c.tax_id || "").toLowerCase().includes(s) ||
         (c.contact_email || "").toLowerCase().includes(s);
-        
+
       return matchesTab && matchesSearch;
     });
   }, [clients, search, activeTab]);
@@ -168,8 +168,8 @@ export default function ClientsListPage() {
                 {search ? "Sin coincidencias" : activeTab === 'active' ? "Sin clientes activos" : "Histórico vacío"}
               </h2>
               <p className="text-slate-500 max-w-sm mx-auto mb-8 font-medium">
-                {activeTab === 'active' 
-                  ? "Registra a tus clientes para empezar a gestionar sus subvenciones." 
+                {activeTab === 'active'
+                  ? "Registra a tus clientes para empezar a gestionar sus subvenciones."
                   : "Aquí aparecerán los clientes que decidas archivar temporalmente."}
               </p>
               {activeTab === 'active' && !search && (
@@ -203,8 +203,8 @@ export default function ClientsListPage() {
                       </div>
                       <ExternalLink size={18} className="text-slate-200 group-hover:text-blue-400 transition-colors" />
                     </div>
-                    
-                    <h3 
+
+                    <h3
                       className="text-2xl font-black text-slate-900 mb-1 tracking-tight group-hover:text-blue-600 transition-colors line-clamp-2 leading-tight h-[3.5rem] flex items-end"
                       title={c.name}
                     >
@@ -213,7 +213,7 @@ export default function ClientsListPage() {
                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-6">
                       {c.tax_id || "ID Pendiente"}
                     </p>
-                    
+
                     <div className="space-y-3">
                       {c.contact_email && (
                         <div className="flex items-center gap-3 text-sm text-slate-500 font-medium">
@@ -229,14 +229,14 @@ export default function ClientsListPage() {
                       )}
                     </div>
                   </div>
-                  
+
                   <div className="mt-8 pt-6 border-t border-slate-50 flex items-center justify-between">
                     <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">
-                      {new Date(c.created_at).toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })}
+                      {new Date(c.created_at).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' })}
                     </span>
                     <div className="flex items-center gap-3">
                       {c.status !== 'archived' && (
-                        <button 
+                        <button
                           onClick={(e) => {
                             e.preventDefault();
                             e.stopPropagation();
@@ -262,7 +262,7 @@ export default function ClientsListPage() {
         </Tabs.Content>
       </Tabs.Root>
 
-      <ConfirmDialog 
+      <ConfirmDialog
         open={confirmArchive.open}
         onOpenChange={(open: boolean) => setConfirmArchive({ ...confirmArchive, open })}
         title="Archivar Cliente"

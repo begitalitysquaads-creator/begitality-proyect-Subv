@@ -9,12 +9,13 @@ interface ConfirmDialogProps {
   onOpenChange: (open: boolean) => void;
   title: string;
   description: string;
-  onConfirm: () => void;
+  onConfirm: () => void | Promise<void>;
   confirmText?: string;
   cancelText?: string;
   variant?: "danger" | "info" | "warning";
   loading?: boolean;
   showCancel?: boolean;
+  children?: React.ReactNode;
 }
 
 export function ConfirmDialog({
@@ -28,6 +29,7 @@ export function ConfirmDialog({
   variant = "warning",
   loading = false,
   showCancel = true,
+  children,
 }: ConfirmDialogProps) {
   
   const colors = {
@@ -66,6 +68,8 @@ export function ConfirmDialog({
                 {description}
               </Dialog.Description>
             </div>
+
+            {children}
 
             <div className="flex flex-col sm:flex-row gap-3 w-full pt-4">
               {showCancel && (

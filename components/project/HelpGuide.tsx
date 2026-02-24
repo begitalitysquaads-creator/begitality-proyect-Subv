@@ -4,7 +4,8 @@ import { useState } from "react";
 import { 
   HelpCircle, X, Database, RotateCcw, Sparkles, TrendingUp, Info, 
   Zap, Layout, ShieldCheck, Calculator, Users, ClipboardList, FileUp,
-  FileSearch, Target, MessageSquare, Fingerprint
+  FileSearch, Target, MessageSquare, Fingerprint, Activity, Wand2,
+  Calendar, History
 } from "lucide-react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { cn } from "@/lib/utils";
@@ -14,39 +15,39 @@ export function HelpGuide() {
 
   const guides = [
     {
-      icon: <FileUp className="text-blue-600" />,
-      title: "Bases y Quick-Read",
-      desc: "Sube el PDF de la convocatoria. La IA extraerá automáticamente una ficha técnica con importes, plazos y beneficiarios para una consulta rápida."
+      icon: <Fingerprint className="text-blue-600" />,
+      title: "Ficha Técnica Inteligente",
+      desc: "Análisis automático del BOE. La IA extrae importes y plazos críticos que puedes refinar manualmente para una precisión técnica del 100%."
     },
     {
-      icon: <Target className="text-amber-600" />,
-      title: "Gap Analysis Inteligente",
-      desc: "El sistema cruza el perfil del cliente con las bases. Si la viabilidad es inferior al 100%, la IA listará los impedimentos críticos detectados."
+      icon: <Activity className="text-blue-600" />,
+      title: "Diagnóstico IA Premium",
+      desc: "Detecta riesgos técnicos y recibe una puntuación de calidad (Score) antes de la entrega. La IA identifica debilidades en cada sección de la memoria."
     },
     {
-      icon: <Fingerprint className="text-indigo-600" />,
-      title: "Contexto de Redacción",
-      desc: "Define directrices específicas (tono, enfoque, prioridades) en el panel lateral. La IA las usará para personalizar cada sección de la memoria."
+      icon: <Wand2 className="text-blue-600" />,
+      title: "Comandos IA Dinámicos",
+      desc: "Modifica secciones usando lenguaje natural. Pide a la IA 'hazlo más técnico', 'resume' o 'enfócate en software' directamente en el editor."
     },
     {
-      icon: <ClipboardList className="text-blue-500" />,
-      title: "Smart Roadmap",
-      desc: "Gestión unificada de hitos. Arrastra tareas para priorizar y suelta archivos directamente sobre ellas para completar requisitos documentalmente."
+      icon: <Calendar className="text-blue-600" />,
+      title: "Cronograma de Hitos",
+      desc: "Gestión centralizada de plazos, reuniones y entregas. Sincroniza las fechas críticas del proyecto con el equipo de consultoría."
     },
     {
-      icon: <Sparkles className="text-purple-600" />,
-      title: "Optimización RAG",
-      desc: "Begitality utiliza 'Retrieval-Augmented Generation' para inyectar datos reales del BOE en tus borradores, asegurando precisión técnica absoluta."
+      icon: <ClipboardList className="text-blue-600" />,
+      title: "Plan de Acción IA",
+      desc: "Checklist inteligente generado desde las bases. Organiza tareas, adjunta documentación y marca como 'REVISADO' cada requisito formal."
     },
     {
-      icon: <Calculator className="text-emerald-600" />,
+      icon: <History className="text-blue-600" />,
+      title: "Historial de Actividad",
+      desc: "Trazabilidad absoluta. Cada cambio en el presupuesto, textos o equipo queda registrado con responsable y timestamp para auditoría interna."
+    },
+    {
+      icon: <Calculator className="text-blue-600" />,
       title: "Simulador Financiero",
-      desc: "Calcula el ROI estimado ajustando la intensidad de ayuda. El sistema actualiza en tiempo real el presupuesto elegible y la subvención esperada."
-    },
-    {
-      icon: <MessageSquare className="text-slate-900" />,
-      title: "Master Copilot",
-      desc: "Chat integrado con memoria del proyecto. Resuelve dudas técnicas sobre las bases o pide redactar párrafos específicos usando todo el contexto disponible."
+      desc: "Calcula el retorno de la inversión ajustando partidas y porcentajes de intensidad de ayuda en tiempo real."
     }
   ];
 

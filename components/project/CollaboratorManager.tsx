@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { Users, Plus, X, Loader2, Shield, User, Trash2, Search, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { logClientAction } from "@/lib/audit-client";
 
 interface Collaborator {
   id: string;
@@ -98,6 +99,9 @@ export function CollaboratorManager({ projectId }: { projectId: string }) {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Error al añadir");
       
+      const collabName = suggestions.find(s => s.email === email)?.full_name || email;
+      await logClientAction(projectId, "Equipo", `añadió a ${collabName} al equipo`);
+
       setSearchTerm("");
       setSuggestions([]);
       setShowAdd(false);
@@ -114,7 +118,10 @@ export function CollaboratorManager({ projectId }: { projectId: string }) {
     setRemoving(true);
     try {
       const res = await fetch(`/api/projects/${projectId}/collaborators?id=${confirmDelete.id}`, { method: "DELETE" });
-      if (res.ok) fetchCollaborators();
+      if (res.ok) {
+        await logClientAction(projectId, "Equipo", `eliminó a ${confirmDelete.name} del equipo`);
+        fetchCollaborators();
+      }
       setConfirmDelete({open: false, id: "", name: ""});
     } catch (e) {
       console.error(e);
@@ -124,11 +131,18 @@ export function CollaboratorManager({ projectId }: { projectId: string }) {
   };
 
   return (
-    <div className="bg-white border border-slate-200 rounded-[2rem] p-6 shadow-sm relative group animate-in fade-in duration-700">
+    <div className="bg-white border border-slate-200 rounded-[2.5rem] p-8 shadow-sm relative group animate-in fade-in duration-700 overflow-hidden">
       
-      <div className="flex items-center justify-between mb-4 relative z-10">
+      {/* Background Icon */}
+      <div className="absolute inset-0 rounded-[2.5rem] overflow-hidden pointer-events-none">
+        <div className="absolute -right-8 -bottom-8 opacity-[0.02] group-hover:scale-110 transition-transform duration-1000">
+          <Users size={280} />
+        </div>
+      </div>
+
+      <div className="flex items-center justify-between mb-8 relative z-10">
         <h3 className="font-black text-slate-900 flex items-center gap-2.5 text-[10px] uppercase tracking-[0.25em]">
-          <div className="w-2 h-2 bg-blue-600 rounded-full" />
+          <div className="w-2 h-2 bg-blue-600 rounded-full shadow-[0_0_10px_rgba(37,99,235,0.5)]" />
           Equipo Begitality
         </h3>
         <button 
@@ -139,15 +153,15 @@ export function CollaboratorManager({ projectId }: { projectId: string }) {
             setError(null);
           }}
           className={cn(
-            "p-1.5 rounded-lg transition-all active:scale-95",
+            "p-2 rounded-xl transition-all active:scale-95",
             showAdd ? "bg-slate-100 text-slate-400" : "text-slate-300 hover:text-blue-600 hover:bg-blue-50"
           )}
         >
-          {showAdd ? <X size={16} /> : <Plus size={16} />}
+          {showAdd ? <X size={18} /> : <Plus size={18} />}
         </button>
       </div>
 
-      <div className="space-y-3 relative z-10">
+      <div className="space-y-4 relative z-10">
         {showAdd && (
           <div className="mb-4 space-y-2 animate-in slide-in-from-top-2 duration-300" ref={searchRef}>
             <div className="relative">
@@ -241,10 +255,6 @@ export function CollaboratorManager({ projectId }: { projectId: string }) {
         loading={removing}
         onConfirm={removeCollaborator}
       />
-
-      <div className="absolute -right-4 -bottom-4 opacity-[0.015] pointer-events-none">
-        <Users size={120} />
-      </div>
     </div>
   );
 }

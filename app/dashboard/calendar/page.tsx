@@ -36,7 +36,8 @@ interface CalendarEvent {
     date: string; // YYYY-MM-DD
     type: string; // 'project_start', 'project_deadline', 'deliverable', 'meeting', 'review', etc.
     client?: string;
-    status?: string;
+    status?: string; // Estado del hito individual
+    projectStatus?: string; // Estado del proyecto padre
     collaborators?: { id: string; name: string }[];
 }
 
@@ -482,9 +483,18 @@ export default function CalendarPage() {
                                             </div>
                                             <div className="space-y-3 relative z-20">
                                                 {dayEvents.map((e) => (
-                                                    <div key={e.id} className={cn("p-3 rounded-2xl text-[9px] font-black uppercase tracking-tight transition-all hover:scale-[1.02] shadow-sm border", EVENT_TYPE_CONFIG[e.type]?.bg, EVENT_TYPE_CONFIG[e.type]?.color, "border-transparent hover:border-blue-200")}>
+                                                    <div key={e.id} className={cn(
+                                                        "p-3 rounded-2xl text-[9px] font-black uppercase tracking-tight transition-all hover:scale-[1.02] shadow-sm border",
+                                                        EVENT_TYPE_CONFIG[e.type]?.bg,
+                                                        EVENT_TYPE_CONFIG[e.type]?.color,
+                                                        "border-transparent hover:border-blue-200",
+                                                        e.projectStatus === 'archived' && "opacity-40 grayscale-[0.5]",
+                                                        e.projectStatus === 'finished' && "opacity-80"
+                                                    )}>
                                                         <div className="flex items-center gap-2 mb-1">
                                                             <span className="truncate">{e.title}</span>
+                                                            {e.projectStatus === 'archived' && <Archive size={8} className="shrink-0" />}
+                                                            {e.projectStatus === 'finished' && <ShieldCheck size={8} className="shrink-0" />}
                                                         </div>
                                                         <p className="opacity-50 truncate">{e.client || 'Sin cliente'}</p>
                                                     </div>
@@ -514,14 +524,32 @@ export default function CalendarPage() {
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 {selectedEvents.map((e) => {
                                     const Config = EVENT_TYPE_CONFIG[e.type] || EVENT_TYPE_CONFIG.other;
+                                    const isArchived = e.projectStatus === 'archived';
+                                    const isFinished = e.projectStatus === 'finished';
+
                                     return (
-                                        <Link key={e.id} href={`/dashboard/projects/${e.projectId}`} className="flex items-start justify-between p-6 bg-slate-50/50 border border-slate-100 rounded-3xl hover:bg-white hover:shadow-xl hover:border-blue-100 transition-all group">
+                                        <Link 
+                                            key={e.id} 
+                                            href={isFinished ? `/dashboard/projects/${e.projectId}/export` : `/dashboard/projects/${e.projectId}`} 
+                                            className={cn(
+                                                "flex items-start justify-between p-6 border rounded-3xl hover:shadow-xl transition-all group",
+                                                isArchived ? "bg-slate-50 border-slate-100 opacity-60" : "bg-slate-50/50 border-slate-100 hover:bg-white hover:border-blue-100"
+                                            )}
+                                        >
                                             <div className="flex items-start gap-4 min-w-0">
-                                                <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center shrink-0", Config.bg, Config.color)}>
+                                                <div className={cn(
+                                                    "w-10 h-10 rounded-xl flex items-center justify-center shrink-0", 
+                                                    Config.bg, Config.color,
+                                                    isArchived && "grayscale"
+                                                )}>
                                                     <Config.icon size={20} />
                                                 </div>
                                                 <div className="min-w-0">
-                                                    <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">{Config.label}</p>
+                                                    <div className="flex items-center gap-2 mb-1">
+                                                        <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">{Config.label}</p>
+                                                        {isArchived && <span className="text-[7px] font-black bg-amber-100 text-amber-600 px-1.5 py-0.5 rounded-full uppercase tracking-tighter">Archivado</span>}
+                                                        {isFinished && <span className="text-[7px] font-black bg-emerald-100 text-emerald-600 px-1.5 py-0.5 rounded-full uppercase tracking-tighter">Cerrado</span>}
+                                                    </div>
                                                     <h4 className="font-black text-slate-900 text-sm truncate group-hover:text-blue-600 transition-colors tracking-tight">{e.title}</h4>
                                                     <p className="text-[10px] font-bold text-slate-400 mt-1 truncate">{e.client || "Infraestructura Begitality"}</p>
                                                 </div>

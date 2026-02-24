@@ -12,6 +12,7 @@ import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 import { StyledTooltip } from "@/components/ui/Tooltip";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { logClientAction } from "@/lib/audit-client";
 
 interface Section {
   id: string;
@@ -36,6 +37,7 @@ export function SeccionesMemoria({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [optimizing, setOptimizing] = useState<string | null>(null);
+  const [customInstruction, setCustomInstruction] = useState("");
   
   // Deletion States
   const [confirmEmpty, setConfirmEmpty] = useState(false);
@@ -49,6 +51,11 @@ export function SeccionesMemoria({
   
   const router = useRouter();
   const supabase = createClient();
+  
+  // Reset instruction when section selection changes
+  useEffect(() => {
+    setCustomInstruction("");
+  }, [selectedId]);
 
   const handleGenerate = async () => {
     setError(null);
@@ -68,7 +75,10 @@ export function SeccionesMemoria({
         .eq("project_id", projectId)
         .order("sort_order");
       
-      if (newSections) setSections(newSections);
+      if (newSections) {
+        await logClientAction(projectId, "Memoria", "generó la estructura de la memoria con IA");
+        setSections(newSections);
+      }
       router.refresh();
     } catch (e: any) {
       setError(e.message);
@@ -77,20 +87,24 @@ export function SeccionesMemoria({
     }
   };
 
-  const handleOptimize = async (id: string, currentContent: string) => {
+  const handleOptimize = async (id: string, currentContent: string, instruction?: string) => {
     setOptimizing(id);
     try {
+      const section = sections.find(s => s.id === id);
       const res = await fetch(`/api/projects/${projectId}/sections/${id}/optimize`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content: currentContent })
+        body: JSON.stringify({ content: currentContent, instruction })
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Error al optimizar");
       
       if (data.improvedText) {
+        const actionLabel = instruction ? "modificó" : "optimizó";
+        await logClientAction(projectId, "Memoria", `${actionLabel} con IA la sección "${section?.title}"`);
         setSections(prev => prev.map(s => s.id === id ? { ...s, content: data.improvedText } : s));
-        await updateContent(id, data.improvedText);
+        await updateContent(id, data.improvedText, true); 
+        setCustomInstruction(""); // Limpiar tras éxito
       }
     } catch (e: any) {
       console.error(e);
@@ -99,26 +113,33 @@ export function SeccionesMemoria({
     }
   };
 
-  const updateContent = async (id: string, content: string) => {
+  const updateContent = async (id: string, content: string, skipLog = false) => {
     setSaving(true);
+    const section = sections.find(s => s.id === id);
     const { error: err } = await supabase
       .from("sections")
       .update({ content })
       .eq("id", id);
     
     if (!err) {
+      if (!skipLog) {
+        await logClientAction(projectId, "Memoria", `actualizó el contenido de "${section?.title}"`);
+      }
       setSections(prev => prev.map(s => s.id === id ? { ...s, content } : s));
     }
     setSaving(false);
   };
 
   const toggleComplete = async (id: string, current: boolean) => {
+    const section = sections.find(s => s.id === id);
     const { error: err } = await supabase
       .from("sections")
       .update({ is_completed: !current })
       .eq("id", id);
     
     if (!err) {
+      const actionDesc = !current ? 'marcó como revisada' : 'reabrió';
+      await logClientAction(projectId, "Memoria", `${actionDesc} la sección "${section?.title}"`);
       setSections(prev => prev.map(s => s.id === id ? { ...s, is_completed: !current } : s));
       router.refresh();
     }
@@ -133,6 +154,7 @@ export function SeccionesMemoria({
         .eq("project_id", projectId);
       
       if (!error) {
+        await logClientAction(projectId, "Memoria", "vació el índice de la memoria");
         setSections([]);
         setConfirmEmpty(false);
         router.refresh();
@@ -153,6 +175,7 @@ export function SeccionesMemoria({
         .eq("id", confirmDelete.id);
       
       if (!error) {
+        await logClientAction(projectId, "Memoria", `eliminó la sección "${confirmDelete.title}"`);
         setSections(prev => prev.filter(s => s.id !== confirmDelete.id));
         setConfirmDelete({ open: false, id: "", title: "" });
         router.refresh();
@@ -166,6 +189,7 @@ export function SeccionesMemoria({
 
   const handleSaveTitle = async (id: string) => {
     if (!newTitleValue.trim()) return;
+    const oldTitle = sections.find(s => s.id === id)?.title;
     setSavingTitle(true);
     try {
       const { error } = await supabase
@@ -174,6 +198,7 @@ export function SeccionesMemoria({
         .eq("id", id);
       
       if (!error) {
+        await logClientAction(projectId, "Memoria", `renombró la sección "${oldTitle}" a "${newTitleValue.trim()}"`);
         setSections(prev => prev.map(s => s.id === id ? { ...s, title: newTitleValue.trim() } : s));
         setEditingTitleId(null);
       }
@@ -330,7 +355,7 @@ export function SeccionesMemoria({
                           <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest">{words} palabras</span>
                           {s.is_completed && (
                             <span className="text-[9px] font-black text-emerald-600 uppercase tracking-widest flex items-center gap-1">
-                              <CheckCircle2 size={10} /> Verificado
+                              <CheckCircle2 size={10} /> REVISADO
                             </span>
                           )}
                         </div>
@@ -390,6 +415,34 @@ export function SeccionesMemoria({
                         className="w-full min-h-[350px] p-8 bg-transparent rounded-[1.5rem] border-none outline-none font-serif text-slate-800 leading-relaxed text-lg resize-y placeholder:text-slate-200"
                         placeholder="Comienza la redacción oficial..."
                       />
+
+                      {/* IA COMMAND INPUT (Comandos de Voz/Texto Premium) */}
+                      <div className="px-8 py-4 bg-white/40 border-t border-slate-100 flex items-center gap-4 group/ia transition-all focus-within:bg-blue-50/30">
+                        <div className="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-lg shadow-blue-600/20 shrink-0">
+                          <Wand2 size={18} />
+                        </div>
+                        <input 
+                          value={customInstruction}
+                          onChange={(e) => setCustomInstruction(e.target.value)}
+                          placeholder="Instrucción IA: 'Hazlo más técnico', 'Reduce a la mitad', 'Enfócate en software'..."
+                          className="flex-1 bg-transparent text-sm font-bold text-slate-700 outline-none placeholder:text-slate-300"
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' && customInstruction.trim()) {
+                              handleOptimize(s.id, s.content, customInstruction);
+                            }
+                          }}
+                        />
+                        <button 
+                          onClick={() => handleOptimize(s.id, s.content, customInstruction)}
+                          disabled={optimizing === s.id || !customInstruction.trim()}
+                          className={cn(
+                            "p-2 rounded-xl transition-all shadow-sm active:scale-95",
+                            customInstruction.trim() ? "bg-blue-600 text-white shadow-blue-600/20" : "bg-slate-100 text-slate-300 opacity-0"
+                          )}
+                        >
+                          <Check size={18} strokeWidth={3} />
+                        </button>
+                      </div>
                       
                       {/* TOOLBAR REFINADA (2026 UX) */}
                       <div className="px-6 py-5 flex flex-col lg:flex-row justify-between items-center gap-4 bg-white/80 backdrop-blur-sm border-t border-slate-100 rounded-b-[1.5rem]">
@@ -443,7 +496,7 @@ export function SeccionesMemoria({
                             )}
                           >
                             {s.is_completed ? <CheckCircle2 size={12} /> : <Clock size={12} />}
-                            {s.is_completed ? "Verificado" : "Marcar Revisado"}
+                            {s.is_completed ? "REVISADO" : "MARCAR COMO REVISADO"}
                           </button>
                         </div>
 

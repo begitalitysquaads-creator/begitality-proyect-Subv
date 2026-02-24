@@ -34,6 +34,15 @@ export interface Client {
   de_minimis_received: number;
   notes: string | null;
   status: "active" | "archived";
+
+  // Metadatos corporativos (Extensión 2026)
+  address: string | null;
+  company_size: string | null;
+  founded_year: number | null;
+  website: string | null;
+  revenue_range: string | null;
+  sector: string | null;
+
   created_at: string;
   updated_at: string;
 }
@@ -46,6 +55,10 @@ export interface Project {
   grant_name: string;
   grant_type: string | null;
   status: ProjectStatus;
+
+  // Datos Operativos
+  project_deadline?: string | null; // Fecha para calendario
+
   grant_summary: {
     max_amount: string;
     intensity: string;
@@ -133,4 +146,38 @@ export interface Task {
   metadata: any;
   due_date: string | null;
   created_at: string;
+}
+
+// --- Diagnósticos IA ---
+
+export type RiskLevel = "high" | "medium" | "low";
+
+export interface DiagnosticRisk {
+  level: RiskLevel;
+  message: string;
+  section_id?: string;
+}
+
+export interface DiagnosticSuggestion {
+  priority: 1 | 2 | 3;
+  action: string;
+  section_title?: string;
+}
+
+export interface DiagnosticSectionScore {
+  score: number;
+  feedback: string;
+}
+
+export interface ProjectDiagnostic {
+  id: string;
+  project_id: string;
+  generated_at: string;
+  overall_score: number;
+  summary: string;
+  risks: DiagnosticRisk[];
+  suggestions: DiagnosticSuggestion[];
+  section_scores: Record<string, DiagnosticSectionScore>;
+  requirements_found: string[];
+  model_used: string;
 }

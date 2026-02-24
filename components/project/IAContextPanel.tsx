@@ -5,6 +5,7 @@ import { Sparkles, Save, Loader2, Info } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 import { StyledTooltip } from "@/components/ui/Tooltip";
+import { logClientAction } from "@/lib/audit-client";
 
 export function IAContextPanel({ 
   projectId, 
@@ -26,6 +27,7 @@ export function IAContextPanel({
         .eq("id", projectId);
       
       if (error) throw error;
+      await logClientAction(projectId, "IA", "actualizó las instrucciones de redacción");
     } catch (e) {
       console.error("Error saving IA context:", e);
     } finally {
@@ -34,10 +36,13 @@ export function IAContextPanel({
   };
 
   return (
-    <div className="bg-white border border-slate-200 rounded-[2.5rem] p-8 shadow-sm relative group overflow-hidden flex flex-col h-full">
+    <div className="bg-white border border-slate-200 rounded-[2.5rem] p-8 shadow-sm relative group overflow-hidden flex flex-col h-full animate-in fade-in duration-700">
+      
       {/* Background Icon */}
-      <div className="absolute -right-6 -bottom-6 opacity-[0.015] group-hover:scale-110 transition-transform duration-1000 text-blue-600">
-        <Sparkles size={180} />
+      <div className="absolute inset-0 rounded-[2.5rem] overflow-hidden pointer-events-none">
+        <div className="absolute -right-8 -bottom-8 opacity-[0.02] group-hover:scale-110 transition-transform duration-1000">
+          <Sparkles size={280} />
+        </div>
       </div>
 
       <div className="relative z-10 flex flex-col h-full">

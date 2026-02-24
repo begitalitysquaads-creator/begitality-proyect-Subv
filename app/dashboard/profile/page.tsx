@@ -6,7 +6,8 @@ import {
   User, Mail, Save, Loader2, Camera, ShieldCheck, 
   Zap, Lock, Eye, EyeOff, KeyRound, ArrowRight, 
   CheckCircle2, ShieldAlert, Info, ArrowLeft,
-  LayoutDashboard, Fingerprint, History, Phone, AlignLeft, Calendar, X, AlertCircle
+  LayoutDashboard, Fingerprint, History, X, AlertCircle,
+  Phone, AlignLeft
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
@@ -67,16 +68,13 @@ export default function ProfilePage() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return router.push("/login");
 
-    const { data, error } = await supabase
+    const { data } = await supabase
       .from("profiles")
       .select("*")
       .eq("id", user.id)
       .single();
 
     if (data) {
-      // SINCRONIZACIÓN AUTOMÁTICA DE LAST_LOGIN
-      const actualLastLogin = data.last_login || user.last_sign_in_at;
-      
       setProfile({
         id: data.id,
         full_name: data.full_name || "",
@@ -85,13 +83,8 @@ export default function ProfilePage() {
         role: data.role || "junior_consultant",
         phone_number: data.phone_number || "",
         bio: data.bio || "",
-        last_login: actualLastLogin
+        last_login: data.last_login
       });
-
-      // Si el dato de la tabla está vacío, lo actualizamos en background
-      if (!data.last_login && user.last_sign_in_at) {
-        await supabase.from("profiles").update({ last_login: user.last_sign_in_at }).eq("id", user.id);
-      }
     }
     setLoading(false);
   }
@@ -224,6 +217,20 @@ export default function ProfilePage() {
                   </div>
                 </div>
                 <div className="space-y-6">
+                  <div className="flex items-center justify-between px-1"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Teléfono Directo</label><span className="text-[9px] font-black text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full uppercase tracking-widest">Editable</span></div>
+                  <div className="relative group">
+                    <Phone className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-blue-500 transition-colors" size={20} />
+                    <input value={profile.phone_number} onChange={e => setProfile({...profile, phone_number: e.target.value})} className="w-full pl-14 pr-6 py-5 bg-slate-50 border border-slate-100 rounded-[1.75rem] text-sm font-bold focus:ring-8 focus:ring-blue-500/5 focus:border-blue-500 transition-all outline-none" placeholder="+34 600 000 000" />
+                  </div>
+                </div>
+                <div className="space-y-6 md:col-span-2">
+                  <div className="flex items-center justify-between px-1"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Biografía Profesional</label><span className="text-[9px] font-black text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full uppercase tracking-widest">Editable</span></div>
+                  <div className="relative group">
+                    <AlignLeft className="absolute left-5 top-6 text-slate-300 group-focus-within:text-blue-500 transition-colors" size={20} />
+                    <textarea value={profile.bio} onChange={e => setProfile({...profile, bio: e.target.value})} rows={4} className="w-full pl-14 pr-6 py-5 bg-slate-50 border border-slate-100 rounded-[1.75rem] text-sm font-bold focus:ring-8 focus:ring-blue-500/5 focus:border-blue-500 transition-all outline-none resize-none" placeholder="Escribe algo sobre ti..." />
+                  </div>
+                </div>
+                <div className="space-y-6">
                   <div className="flex items-center justify-between px-1"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Seguridad del Email</label><span className="text-[9px] font-black text-slate-400 bg-slate-50 px-2 py-0.5 rounded-full uppercase tracking-widest">Solo lectura</span></div>
                   <div className="relative opacity-60">
                     <Mail className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300" size={20} />
@@ -231,24 +238,10 @@ export default function ProfilePage() {
                   </div>
                 </div>
                 <div className="space-y-6">
-                  <div className="flex items-center justify-between px-1"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Teléfono de Contacto</label><span className="text-[9px] font-black text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full uppercase tracking-widest">Editable</span></div>
-                  <div className="relative group">
-                    <Phone className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-blue-500 transition-colors" size={20} />
-                    <input value={profile.phone_number} onChange={e => setProfile({...profile, phone_number: e.target.value})} className="w-full pl-14 pr-6 py-5 bg-slate-50 border border-slate-100 rounded-[1.75rem] text-sm font-bold focus:ring-8 focus:ring-blue-500/5 focus:border-blue-500 transition-all outline-none" placeholder="+34 000 000 000" />
-                  </div>
-                </div>
-                <div className="space-y-6">
-                  <div className="flex items-center justify-between px-1"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Última Conexión</label><span className="text-[9px] font-black text-slate-400 bg-slate-50 px-2 py-0.5 rounded-full uppercase tracking-widest">Sistema</span></div>
+                  <div className="flex items-center justify-between px-1"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Último Acceso</label><span className="text-[9px] font-black text-slate-400 bg-slate-50 px-2 py-0.5 rounded-full uppercase tracking-widest">Sistema</span></div>
                   <div className="relative opacity-60">
-                    <Calendar className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300" size={20} />
-                    <input disabled value={profile.last_login ? new Date(profile.last_login).toLocaleString('es-ES', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : "Primera sesión"} className="w-full pl-14 pr-6 py-5 bg-slate-50 border border-slate-100 rounded-[1.75rem] text-sm font-bold outline-none cursor-not-allowed" />
-                  </div>
-                </div>
-                <div className="space-y-6 md:col-span-2">
-                  <div className="flex items-center justify-between px-1"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Bio / Nota Profesional</label><span className="text-[9px] font-black text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full uppercase tracking-widest">Editable</span></div>
-                  <div className="relative group">
-                    <AlignLeft className="absolute left-5 top-6 text-slate-300 group-focus-within:text-blue-500 transition-colors" size={20} />
-                    <textarea value={profile.bio} onChange={e => setProfile({...profile, bio: e.target.value})} rows={4} className="w-full pl-14 pr-6 py-5 bg-slate-50 border border-slate-100 rounded-[1.75rem] text-sm font-bold focus:ring-8 focus:ring-blue-500/5 focus:border-blue-500 transition-all outline-none resize-none" placeholder="Escribe una breve descripción profesional..." />
+                    <History className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300" size={20} />
+                    <input disabled value={profile.last_login ? new Date(profile.last_login).toLocaleString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Primer acceso'} className="w-full pl-14 pr-6 py-5 bg-slate-50 border border-slate-100 rounded-[1.75rem] text-sm font-bold outline-none cursor-not-allowed" />
                   </div>
                 </div>
               </div>
@@ -301,11 +294,11 @@ export default function ProfilePage() {
               )}
               {isRecovering && <div className="p-4 bg-blue-100/50 border border-blue-200 rounded-2xl text-[11px] font-bold text-blue-700 mb-6 flex items-center gap-3 animate-in zoom-in-95"><Info size={16} />Has accedido mediante un enlace de recuperación. Define tu nueva contraseña.</div>}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 pt-4 border-t border-slate-100">
-                <div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Nueva Contraseña</label><div className="relative group"><input type={showNewPass ? "text" : "password"} value={passwordData.newPassword} onChange={e => setPasswordData({...passwordData, newPassword: e.target.value})} className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold focus:ring-4 focus:ring-blue-500/5 transition-all outline-none" placeholder="Mín. 6 caracteres" /><button type="button" onClick={() => setShowNewPass(!showNewPass)} className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-600">{showNewPass ? <EyeOff size={20} /> : <Eye size={20} />}</button></div></div>
+                <div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Nueva Contraseña</label><div className="relative group"><input type={showNewPass ? "text" : "password"} value={passwordData.newPassword} onChange={e => setPasswordData({...passwordData, newPassword: e.target.value})} className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold focus:ring-4 focus:ring-amber-500/5 transition-all outline-none" placeholder="Mín. 6 caracteres" /><button type="button" onClick={() => setShowNewPass(!showNewPass)} className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-600">{showNewPass ? <EyeOff size={20} /> : <Eye size={20} />}</button></div></div>
                 <div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Confirmar Nueva</label><input type={showNewPass ? "text" : "password"} value={passwordData.confirmPassword} onChange={e => setPasswordData({...passwordData, confirmPassword: e.target.value})} className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold focus:ring-4 focus:ring-blue-500/5 transition-all outline-none" placeholder="Repite la clave" /></div>
               </div>
               {passwordMessage && <div className={cn("p-4 rounded-2xl text-xs font-bold flex items-center gap-3 animate-in slide-in-from-top-2", passwordMessage.type === 'success' ? "bg-emerald-50 text-emerald-600 border border-emerald-100" : "bg-red-50 text-red-600 border border-red-100")}>{passwordMessage.type === 'success' ? <CheckCircle2 size={16} /> : <Zap size={16} />}{passwordMessage.text}</div>}
-              <div className="flex flex-col sm:flex-row gap-4 pt-4"><button type="submit" disabled={updatingPassword} className={cn("flex-grow py-5 rounded-[1.5rem] font-black text-[11px] uppercase tracking-widest shadow-xl transition-all active:scale-95 flex items-center justify-center gap-3", isRecovering ? "bg-blue-600 text-white hover:bg-blue-700" : "bg-slate-900 text-white hover:bg-amber-600")}>{updatingPassword ? <Loader2 className="animate-spin" size={18} /> : <Lock size={18} />}{updatingPassword ? "Procesando..." : isRecovering ? "Confirmar Nueva" : "Actualizar Clave"}{isRecovering && <button type="button" onClick={() => setIsRecovering(false)} className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest hover:text-slate-600 transition-all border border-slate-200 rounded-[1.5rem]">Cancelar</button>}</button></div>
+              <div className="flex flex-col sm:flex-row gap-4 pt-4"><button type="submit" disabled={updatingPassword} className={cn("flex-grow py-5 rounded-[1.5rem] font-black text-[11px] uppercase tracking-widest shadow-xl transition-all active:scale-95 flex items-center justify-center gap-3", isRecovering ? "bg-blue-600 text-white hover:bg-blue-700" : "bg-slate-900 text-white hover:bg-amber-600")}>{updatingPassword ? <Loader2 className="animate-spin" size={18} /> : <Lock size={18} />}{updatingPassword ? "Procesando..." : isRecovering ? "Confirmar Nueva" : "Actualizar Clave"}</button>{isRecovering && <button type="button" onClick={() => setIsRecovering(false)} className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest hover:text-slate-600 transition-all border border-slate-200 rounded-[1.5rem]">Cancelar</button>}</div>
             </form>
           </div>
         </div>

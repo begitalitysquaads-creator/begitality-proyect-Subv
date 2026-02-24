@@ -60,11 +60,13 @@ export async function POST(req: Request) {
     });
     const filename = `Memoria_Tecnica_${project.name.replace(/\s+/g, "_")}.pdf`;
 
-    // Marcar como exportado (Histórico)
+    // Nota: No marcamos como 'exported' automáticamente para permitir múltiples exportaciones interactivas
+    /*
     await supabase
       .from("projects")
       .update({ status: "exported" })
       .eq("id", projectId);
+    */
 
     return new NextResponse(new Uint8Array(buffer), {
       status: 200,

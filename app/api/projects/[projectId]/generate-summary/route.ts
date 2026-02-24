@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { extractTextFromPdf } from "@/lib/pdf-extract";
 import { chatModel } from "@/lib/ai";
+import { logAuditAction } from "@/lib/audit";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -56,18 +57,22 @@ export async function POST(
       ${text.substring(0, 30000)} 
     `;
 
-    const result = await chatModel.generateContent(prompt);
+    const result = await chatModel.generateContent({
+      contents: [{ role: "user", parts: [{ text: prompt }] }],
+      generationConfig: {
+        responseMimeType: "application/json",
+      },
+    });
     const rawText = result.response.text().trim();
-    
-    // Limpiar respuesta si la IA incluye bloques de código
-    const cleanJson = rawText.replace(/```json/g, "").replace(/```/g, "").trim();
     
     let summary;
     try {
-      summary = JSON.parse(cleanJson);
+      summary = JSON.parse(rawText);
     } catch (e) {
       console.error("Failed to parse Summary JSON:", rawText);
-      throw new Error("La IA no devolvió un formato de resumen válido.");
+      // Fallback clean if needed (though json mode should handle it)
+      const cleanJson = rawText.replace(/```json/g, "").replace(/```/g, "").trim();
+      summary = JSON.parse(cleanJson);
     }
 
     // 4. Guardar en DB
@@ -77,6 +82,11 @@ export async function POST(
       .eq("id", projectId);
 
     if (updateError) throw updateError;
+
+    await logAuditAction(projectId, user.id, "IA: Resumen", {
+      description: "extrajo automáticamente la ficha resumen técnica del expediente.",
+      summary
+    });
 
     return NextResponse.json(summary);
 

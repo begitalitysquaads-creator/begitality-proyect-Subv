@@ -112,7 +112,7 @@ export async function generateReviewReport(data: ReviewData): Promise<ArrayBuffe
   doc.setFont("helvetica", "bold");
   doc.text(data.clientName, margin + 55, cursorY + 12);
   doc.text(`BEG-${Math.random().toString(36).substring(7).toUpperCase()}`, margin + 55, cursorY + 22);
-  doc.text(new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' }), margin + 55, cursorY + 32);
+  doc.text(new Date().toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' }), margin + 55, cursorY + 32);
 
   // Score Seal
   const scoreColor = data.score >= 80 ? [16, 185, 129] : [245, 158, 11];
@@ -228,8 +228,112 @@ export async function generatePdf(data: any): Promise<ArrayBuffer> {
 }
 
 export async function generateViabilityCertificate(data: ViabilityData): Promise<ArrayBuffer> {
-  // Simplificado por brevedad, pero sigue la misma lógica premium que el ReviewReport
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-  // ... (Implementación premium similar a generateReviewReport)
+  const margin = 25;
+  const pageWidth = 210;
+  const contentWidth = pageWidth - margin * 2;
+
+  // 1. PORTADA
+  doc.setFillColor(15, 23, 42); // Navy Blue
+  doc.rect(0, 0, pageWidth, 297, "F");
+  
+  doc.setDrawColor(16, 185, 129); // Green
+  doc.setLineWidth(1);
+  doc.line(margin, 60, margin + 20, 60);
+
+  doc.setTextColor(255, 255, 255);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(26);
+  doc.text("CERTIFICADO DE", margin, 85);
+  doc.text("VIABILIDAD TÉCNICA", margin, 97);
+  
+  doc.setFontSize(10);
+  doc.setTextColor(148, 163, 184);
+  doc.text("ANÁLISIS PRELIMINAR DE ELEGIBILIDAD Y ÉXITO", margin, 105);
+
+  doc.setFontSize(14);
+  doc.setTextColor(255, 255, 255);
+  const titleLines = doc.splitTextToSize(data.title.toUpperCase(), contentWidth);
+  doc.text(titleLines, margin, 130);
+
+  // Sello inferior
+  doc.setFillColor(30, 41, 59);
+  doc.rect(0, 250, pageWidth, 47, "F");
+  doc.setFontSize(9);
+  doc.text("PROCESADO POR:", margin, 265);
+  doc.setFontSize(12);
+  doc.text("BEGITALITY INTELLIGENCE", margin, 272);
+
+  doc.addPage();
+
+  // 2. CONTENIDO
+  let cursorY = 30;
+  doc.setTextColor(30, 41, 59);
+  doc.setFontSize(16);
+  doc.setFont("helvetica", "bold");
+  doc.text("Resumen de Viabilidad", margin, cursorY);
+  
+  cursorY += 10;
+  doc.setFillColor(248, 250, 252);
+  doc.roundedRect(margin, cursorY, contentWidth, 35, 3, 3, "F");
+  
+  doc.setFontSize(9);
+  doc.setTextColor(100, 116, 139);
+  doc.text("CLIENTE:", margin + 10, cursorY + 12);
+  doc.text("CONVOCATORIA:", margin + 10, cursorY + 22);
+
+  doc.setTextColor(30, 41, 59);
+  doc.setFont("helvetica", "bold");
+  doc.text(data.clientName, margin + 45, cursorY + 12);
+  doc.text(data.grantName, margin + 45, cursorY + 22);
+
+  // Probability Gauge
+  doc.setFillColor(15, 23, 42);
+  doc.roundedRect(pageWidth - margin - 40, cursorY + 5, 30, 25, 2, 2, "F");
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(16);
+  doc.text(`${data.probability}%`, pageWidth - margin - 25, cursorY + 18, { align: "center" });
+  doc.setFontSize(6);
+  doc.text("PROBABILIDAD", pageWidth - margin - 25, cursorY + 24, { align: "center" });
+
+  cursorY += 50;
+
+  // Status Badge
+  const statusColor = data.status === "APTO" ? [16, 185, 129] : [245, 158, 11];
+  doc.setFillColor(statusColor[0], statusColor[1], statusColor[2]);
+  doc.roundedRect(margin, cursorY, 40, 8, 1, 1, "F");
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(9);
+  doc.text(data.status, margin + 20, cursorY + 5.5, { align: "center" });
+  
+  cursorY += 15;
+  doc.setTextColor(30, 41, 59);
+  doc.setFont("times", "normal");
+  doc.setFontSize(11);
+  cursorY = writeText(doc, data.summary, margin, cursorY, contentWidth, 6);
+
+  cursorY += 15;
+  doc.setFont("helvetica", "bold");
+  doc.text("Fortalezas y Oportunidades", margin, cursorY);
+  cursorY += 8;
+  doc.setFont("helvetica", "normal");
+  data.strengths.forEach(s => {
+    doc.text("•", margin, cursorY);
+    cursorY = writeText(doc, s, margin + 5, cursorY, contentWidth - 10, 5);
+    cursorY += 2;
+  });
+
+  cursorY += 10;
+  doc.setFont("helvetica", "bold");
+  doc.text("Riesgos Detectados", margin, cursorY);
+  cursorY += 8;
+  doc.setFont("helvetica", "normal");
+  data.risks.forEach(r => {
+    doc.text("!", margin + 1, cursorY);
+    cursorY = writeText(doc, r, margin + 5, cursorY, contentWidth - 10, 5);
+    cursorY += 2;
+  });
+
+  addFooter(doc, "CERTIFICADO DE VIABILIDAD");
   return doc.output("arraybuffer");
 }

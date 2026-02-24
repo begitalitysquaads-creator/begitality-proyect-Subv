@@ -6,6 +6,8 @@ import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 import { StyledTooltip } from "@/components/ui/Tooltip";
 
+import { logClientAction } from "@/lib/audit-client";
+
 export function IngestButton({ projectId }: { projectId: string }) {
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle');
@@ -18,6 +20,7 @@ export function IngestButton({ projectId }: { projectId: string }) {
       const res = await fetch(`/api/projects/${projectId}/ingest`, { method: "POST" });
       if (!res.ok) throw new Error("Error en la ingesta");
       
+      await logClientAction(projectId, "IA", "actualizó la base de conocimiento (RAG) con nuevos documentos");
       setStatus('success');
       router.refresh();
       setTimeout(() => setStatus('idle'), 3000);

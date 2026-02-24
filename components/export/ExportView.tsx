@@ -155,20 +155,12 @@ export function ExportView({ project }: ExportViewProps) {
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       
-      // Crear un iframe invisible para imprimir
-      const iframe = document.createElement('iframe');
-      iframe.style.display = 'none';
-      iframe.src = url;
-      document.body.appendChild(iframe);
+      // Abrir en una nueva ventana para imprimir
+      window.open(url, '_blank');
       
-      iframe.onload = () => {
-        iframe.contentWindow?.print();
-        // Limpieza después de un tiempo para asegurar que la impresión se lance
-        setTimeout(() => {
-          document.body.removeChild(iframe);
-          URL.revokeObjectURL(url);
-        }, 1000);
-      };
+      // Nota: No podemos cerrar la ventana automáticamente ni llamar a .print()
+      // de forma fiable en todos los navegadores desde el objeto retornado por window.open
+      // si el blob es un PDF nativo, el navegador ya muestra controles de impresión.
     } catch (e) {
       console.error(e);
       setAlertDialog({

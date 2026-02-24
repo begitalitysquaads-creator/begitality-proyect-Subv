@@ -59,7 +59,7 @@ export async function GET(request: Request) {
                 title: `Inicio: ${p.name}`,
                 date: startDate,
                 type: 'project_start',
-                status: p.status,
+                projectStatus: p.status,
                 client: clientName,
                 collaborators
             });
@@ -79,6 +79,7 @@ export async function GET(request: Request) {
                         date: mDate,
                         type: m.type || 'deliverable',
                         status: m.status || 'pending',
+                        projectStatus: p.status, // Añadimos el estado del proyecto padre
                         client: clientName,
                         collaborators
                     });
@@ -95,7 +96,7 @@ export async function GET(request: Request) {
                 title: `CIERRE: ${p.name}`,
                 date: projectDeadline,
                 type: 'project_deadline',
-                status: p.status,
+                projectStatus: p.status,
                 client: clientName,
                 collaborators
             });
@@ -110,7 +111,7 @@ export async function GET(request: Request) {
                 title: `FINALIZADO: ${p.name}`,
                 date: finishedDate,
                 type: 'project_finished',
-                status: p.status,
+                projectStatus: p.status,
                 client: clientName,
                 collaborators
             });

@@ -3,8 +3,10 @@
 @tailwind utilities;
 
 :root {
-  --begitality-primary: 37 99 235; /* blue-600 */
-  --begitality-muted: 248 250 252; /* slate-50 */
+  --begitality-primary: 37 99 235;
+  /* blue-600 */
+  --begitality-muted: 248 250 252;
+  /* slate-50 */
 }
 
 @layer base {

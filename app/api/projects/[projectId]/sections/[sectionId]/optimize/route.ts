@@ -15,7 +15,7 @@ export async function POST(
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { content } = await req.json();
+  const { content, instruction } = await req.json();
 
   // 0. Fetch Writing Instructions
   const { data: project } = await supabase.from("projects").select("writing_instructions").eq("id", projectId).single();
@@ -23,7 +23,7 @@ export async function POST(
   // 1. Fetch relevant context via RAG
   let contextText = "";
   try {
-    const queryEmbedding = await generateEmbedding(content || "Contexto para esta sección");
+    const queryEmbedding = await generateEmbedding(instruction || content || "Contexto para esta sección");
     const { data: chunks } = await supabase.rpc("match_embeddings", {
       p_project_id: projectId,
       p_query_embedding: queryEmbedding,
@@ -42,29 +42,31 @@ export async function POST(
   // 2. IA Optimization
   try {
     const prompt = `
-      Eres un Redactor Senior de Subvenciones. 
-      Tu objetivo es mejorar el texto del usuario haciéndolo más técnico, persuasivo y alineado con las bases de la convocatoria.
+      Eres un Redactor Senior de Subvenciones de Begitality. 
+      Tu objetivo es modificar el texto del usuario basándote en instrucciones específicas y el contexto de las bases.
       
       BASES DE REFERENCIA (CONTEXTO):
       ${contextText}
       
-      INSTRUCCIONES:
-      1. Mantén la estructura original pero mejora el vocabulario.
-      2. Asegúrate de que los términos técnicos coincidan con las bases.
-      3. Aumenta la densidad técnica y justifica mejor el impacto del proyecto.
-      4. SIGUE ESTAS DIRECTRICES ESPECÍFICAS DE ESTILO: ${project?.writing_instructions || "Usa un tono formal y técnico."}
-      5. Responde SOLO con el nuevo texto mejorado, sin introducciones.
+      INSTRUCCIONES DE ESTILO DEL PROYECTO:
+      ${project?.writing_instructions || "Usa un tono formal, técnico y ejecutivo."}
+      
+      INSTRUCCIÓN ESPECÍFICA DEL USUARIO (MÁXIMA PRIORIDAD):
+      ${instruction || "Mejora la redacción, hazla más técnica y profesional."}
 
-      TEXTO ORIGINAL:
+      TEXTO ORIGINAL A MODIFICAR:
       ${content}
+
+      Responde ÚNICAMENTE con el nuevo texto modificado. No incluyas introducciones, ni comentarios, ni explicaciones.
     `;
 
     const result = await chatModel.generateContent(prompt);
     const improvedText = result.response.text();
 
-    await logAuditAction(projectId, user.id, "Optimización IA", {
+    await logAuditAction(projectId, user.id, "IA: Modificación", {
       section_id: sectionId,
-      description: "mejoró la redacción de una sección con contexto RAG."
+      instruction: instruction || "Optimización general",
+      description: "modificó el texto de una sección mediante instrucciones IA."
     });
 
     return NextResponse.json({ improvedText });

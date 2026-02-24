@@ -1,96 +1,94 @@
-# Begitality
+# 🚀 Begitality | Executive AI Grant Hub (2026 Edition)
 
-Plataforma inteligente de gestión de subvenciones. Automatiza la redacción de memorias técnicas para convocatorias públicas con IA contextual (sin re-contextualizar en cada proyecto).
+Plataforma de inteligencia estratégica para la gestión avanzada de subvenciones públicas. Begitality redefine la consultoría técnica mediante la automatización de alto nivel, utilizando IA generativa de última generación (Gemini 3) para la redacción, auditoría y optimización de expedientes técnicos.
 
-## Stack
+---
 
-- **Framework:** Next.js 16.1 (App Router)
-- **Lenguaje:** TypeScript
-- **Backend/DB:** Supabase (Auth, DB, Storage)
-- **UI:** React, Radix UI, TailwindCSS
-- **IA:** gemini/Anthropic (Etapa 3)
+## 🛠️ Stack Tecnológico (Elite Core)
 
-## Requisitos
+- **Framework:** Next.js 16.1 (App Router + Turbopack)
+- **Runtime:** Bun / Node.js 22 (LTS)
+- **Database & Auth:** Supabase (PostgreSQL 17 + RLS Enforcement)
+- **Vector Engine:** pgvector para RAG (Retrieval-Augmented Generation)
+- **AI Core:** Google Generative AI (gemini-3-flash-preview) • v1beta API
+- **UI/UX:** Tailwind CSS 4 (Oxide), Radix UI, Lucide Icons
+- **Type Safety:** TypeScript 5.7 (Strict Mode)
 
-- Node.js 20.9+ (LTS)
-- Cuenta [Supabase](https://supabase.com)
+---
 
-## Setup
+## ✨ Funcionalidades Premium
 
-1. **Clonar e instalar**
+### 🧠 Inteligencia Documental (RAG)
+- **Ficha Técnica Inteligente:** Extracción automática de KPIs (Importes, Intensidad, Plazos) desde PDFs oficiales. Permite refinado manual con sincronización en base de datos.
+- **Contexto de Redacción:** Panel dinámico para inyectar directrices de estilo, tono y enfoque técnico que la IA aplica transversalmente.
 
+### 🛡️ Auditoría y Control
+- **Diagnóstico IA Premium:** Evaluación proactiva de la calidad de la memoria técnica con puntuación (Score 0-100) y detección de riesgos técnicos.
+- **Historial de Actividad (Audit Trail):** Trazabilidad absoluta en tiempo real de todos los cambios realizados por el equipo (logs inmutables).
+
+### ⚡ Operaciones de Alto Rendimiento
+- **Comandos IA Dinámicos:** Modificación de textos en tiempo real mediante lenguaje natural ("Hazlo más técnico", "Resume a 500 palabras").
+- **Smart Roadmap:** Plan de acción autogenerado desde las bases de la convocatoria con gestión documental integrada.
+- **Simulador Financiero:** Cálculo dinámico de ROI y subvención estimada basado en la intensidad de ayuda.
+
+---
+
+## 🚀 Setup de Desarrollo
+
+1. **Dependencias**
    ```bash
    npm install
    ```
 
-2. **Variables de entorno**
-   - Copiar `.env.example` a `.env.local`
-   - En el dashboard de Supabase: Project Settings → API → anotar `Project URL` y `anon public` key
-   - Rellenar `NEXT_PUBLIC_SUPABASE_URL` y `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+2. **Entorno Operativo**
+   Configurar `.env.local` con las credenciales de Supabase y Gemini:
+   ```env
+   NEXT_PUBLIC_SUPABASE_URL=...
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=...
+   GEMINI_API_KEY=...
+   ```
 
-3. **Base de datos**
-   - En Supabase: SQL Editor → New query
-   - Pegar y ejecutar el contenido de `supabase/migrations/001_initial_schema.sql` (ver `docs/COMPARATIVA-SQL-Y-ESTRUCTURA.md` para comparativa con otros SQLs).
-   - Para **cargar PDFs de convocatoria**: ejecutar también `supabase/migrations/003_storage_convocatoria.sql` (crea el bucket y las políticas de Storage). Si el INSERT del bucket falla, crea el bucket desde Dashboard → Storage → New bucket (id: `convocatoria-files`, privado) y vuelve a ejecutar solo las políticas del mismo fichero.
+3. **Arquitectura de Datos**
+   - Ejecutar migraciones en orden correlativo desde `supabase/migrations/`.
+   - **Crítico:** Asegurar la ejecución de `032_fix_audit_logs_fk_and_realtime.sql` para habilitar la trazabilidad de usuarios.
 
-4. **Auth (confirmación de email / OAuth)**
-   - En Supabase: Authentication → URL Configuration
-   - Añadir en **Redirect URLs**: `http://localhost:3000/auth/callback` (y la URL de producción cuando corresponda).
-
-5. **Arrancar**
+4. **Ejecución**
    ```bash
    npm run dev
    ```
-   Abrir [http://localhost:3000](http://localhost:3000).
 
-## Estructura del proyecto (Etapa 1)
+---
 
-```
+## 🏗️ Estructura de la Aplicación
+
+```text
 app/
-  layout.tsx              # Layout raíz + fuentes
-  page.tsx                # Landing (sin auth)
-  globals.css
-  (auth)/
-    login/page.tsx
-    signup/page.tsx
-  auth/callback/route.ts  # Intercambio de code por sesión (email confirm / OAuth)
-  dashboard/
-    layout.tsx            # Sidebar + área principal
-    page.tsx              # Panel con proyectos
-    projects/
-      page.tsx            # Lista de proyectos
-      new/page.tsx        # Crear proyecto
-      [id]/page.tsx       # Espacio de trabajo (S2)
-      [id]/export/page.tsx
-    history/page.tsx
+  ├── (auth)/           # Flujos de acceso blindados
+  ├── api/              # Endpoints de IA y Operaciones Técnicas
+  ├── dashboard/        # Centro de control ejecutivo
+  └── layout.tsx        # Inyección de Begitality Design System
 components/
-  ui/sidebar.tsx
-  export/ExportView.tsx
+  ├── project/          # Módulos de inteligencia (Ficha IA, Diagnóstico, etc.)
+  ├── ui/               # Componentes Premium (Selectors, DatePickers)
+  └── export/           # Motor de generación DOCX/PDF
 lib/
-  supabase/client.ts
-  supabase/server.ts
-  types.ts
-  utils.ts
-supabase/
-  migrations/001_initial_schema.sql
-middleware.ts             # Auth + protección rutas
+  ├── ai.ts             # Configuración Gemini 3 v1beta
+  ├── audit-client.ts   # Sistema de logging de cliente
+  └── supabase/         # Clientes de base de datos (Server/Client)
 ```
 
-## Etapas de desarrollo
+---
 
-- **Etapa 1 (S1):** Arquitectura base, Auth Supabase, Dashboard y navegación lateral. ✅
-- **Etapa 2 (S2):** Espacio de trabajo por proyecto, “Cargar Bases”, esquema DB completo.
-- **Etapa 3 (S3):** Asistente IA, motor de reutilización, checklists dinámicos.
-- **Etapa 4 (S4):** Exportación PDF/Word, flujo completo, refinamiento visual.
+## 📊 Roadmap de Evolución
 
-## Producción (Edge Functions, PDF/DOCX, pgvector)
+- [x] **Fase 1:** Arquitectura y RBAC (Role Based Access Control).
+- [x] **Fase 2:** Ingesta RAG y Ficha Técnica Inteligente.
+- [x] **Fase 3:** Diagnóstico de Calidad y Comandos IA.
+- [x] **Fase 4:** Historial de Auditoría y Refinamiento Premium UI.
+- [ ] **Fase 5:** Integración con APIs de firma digital y registro oficial.
 
-Ver **[docs/PRODUCCION.md](docs/PRODUCCION.md)** para:
+---
 
-- Configurar **Supabase Edge Functions** (ai-chat, ai-embed) y secrets (Gemini/Anthropic).
-- Uso de la **API de exportación** (PDF/DOCX) en `/api/export`.
-- Migración **pgvector** y motor de reutilización semántico (`002_pgvector_embeddings.sql`).
+## ⚖️ Licencia y Propiedad
 
-## Nota
-
-El archivo `index.tsx` en la raíz es la versión monolítica anterior; la aplicación actual está en la estructura Next.js descrita arriba.
+Begitality es una plataforma propietaria optimizada para consultoría de alto nivel. Todos los derechos reservados © 2026.

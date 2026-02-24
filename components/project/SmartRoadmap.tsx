@@ -11,6 +11,7 @@ import {
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 import { StyledTooltip } from "@/components/ui/Tooltip";
+import { logClientAction } from "@/lib/audit-client";
 
 interface Task {
   id: string;
@@ -78,6 +79,8 @@ export function SmartRoadmap({ projectId }: { projectId: string }) {
     try {
       const res = await fetch(`/api/projects/${projectId}/generate-checklist`, { method: "POST" });
       if (!res.ok) throw new Error("Error generating roadmap");
+      
+      // El log se hace en la API
       await fetchTasks();
       router.refresh();
     } catch (e) {
@@ -105,6 +108,7 @@ export function SmartRoadmap({ projectId }: { projectId: string }) {
         .single();
 
       if (!error && data) {
+        await logClientAction(projectId, "Tarea", `añadió manualmente la tarea "${newTitle.trim()}"`);
         setNewTitle("");
         setShowForm(false);
         fetchTasks();
@@ -125,14 +129,18 @@ export function SmartRoadmap({ projectId }: { projectId: string }) {
       .eq("id", task.id);
     
     if (!error) {
+      const actionDesc = nextStatus === 'completed' ? 'completó' : 'reabrió';
+      await logClientAction(projectId, "Tarea", `${actionDesc} la tarea "${task.title}"`);
       setTasks(prev => prev.map(t => t.id === task.id ? { ...t, status: nextStatus } : t));
       router.refresh();
     }
   };
 
   const deleteTask = async (id: string) => {
+    const taskToDelete = tasks.find(t => t.id === id);
     const { error } = await supabase.from("project_tasks").delete().eq("id", id);
     if (!error) {
+      await logClientAction(projectId, "Tarea", `eliminó la tarea "${taskToDelete?.title}"`);
       setTasks(prev => prev.filter(t => t.id !== id));
       router.refresh();
     }
@@ -153,6 +161,7 @@ export function SmartRoadmap({ projectId }: { projectId: string }) {
         .eq("id", editingId);
 
       if (!error) {
+        await logClientAction(projectId, "Tarea", `actualizó los detalles de la tarea "${editTitle}"`);
         setEditingId(null);
         fetchTasks();
         router.refresh();
@@ -188,17 +197,21 @@ export function SmartRoadmap({ projectId }: { projectId: string }) {
     for (const up of updates) {
       await supabase.from("project_tasks").update({ sort_order: up.sort_order }).eq("id", up.id);
     }
+    
+    await logClientAction(projectId, "Tarea", "reorganizó la hoja de ruta");
     router.refresh();
   };
 
   const handleFileUpload = async (file: File, taskId: string) => {
     setUploading(taskId);
     try {
+      const task = tasks.find(t => t.id === taskId);
       const path = `${projectId}/tasks/${taskId}_${file.name}`;
       const { error: upErr } = await supabase.storage.from("convocatoria-files").upload(path, file, { upsert: true });
       if (upErr) throw upErr;
 
       await supabase.from("project_tasks").update({ file_path: path, status: 'completed' }).eq("id", taskId);
+      await logClientAction(projectId, "Tarea", `subió el documento "${file.name}" para la tarea "${task?.title}"`);
       fetchTasks();
       router.refresh();
     } catch (e) {
@@ -237,7 +250,7 @@ export function SmartRoadmap({ projectId }: { projectId: string }) {
             <ClipboardList size={24} />
           </div>
           <div>
-            <h3 className="text-xl font-black text-slate-900 tracking-tighter leading-none uppercase">Hoja de Ruta</h3>
+            <h3 className="text-xl font-black text-slate-900 tracking-tighter leading-none uppercase">Plan de Acción IA</h3>
             <p className="text-[9px] font-black text-blue-600 uppercase tracking-[0.3em] mt-1.5 flex items-center gap-2">
               <Sparkles size={10} className="animate-pulse" />
               Planificación Inteligente
@@ -356,7 +369,7 @@ export function SmartRoadmap({ projectId }: { projectId: string }) {
                         <div className="flex items-center gap-4 mt-1.5">
                           {task.file_path ? (
                             <div className="flex items-center gap-1.5 text-[9px] font-black text-blue-600 uppercase tracking-widest bg-blue-50/50 px-2.5 py-1 rounded-full border border-blue-100/50">
-                              <FileText size={10} /> Verificado
+                              <FileText size={10} /> REVISADO
                             </div>
                           ) : (
                             <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest">

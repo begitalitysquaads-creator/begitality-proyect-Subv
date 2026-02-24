@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
+import { isAdmin } from "@/lib/auth";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -8,6 +9,10 @@ const supabaseAdmin = createClient(
 
 export async function POST(req: Request) {
   try {
+    if (!await isAdmin()) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const { email, full_name } = await req.json();
     if (!email) return NextResponse.json({ error: "Email requerido" }, { status: 400 });
 

@@ -5,6 +5,7 @@ import { Sparkles, Loader2, AlertCircle, CheckCircle2, ShieldCheck, ChevronRight
 import * as Dialog from "@radix-ui/react-dialog";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
+import { logClientAction } from "@/lib/audit-client";
 
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 
@@ -47,6 +48,9 @@ export function AnalisisViabilidadIA({ projectId, hasClient, initialReport }: { 
       const res = await fetch(`/api/projects/${projectId}/check-eligibility`, { method: "POST" });
       const resData = await res.json();
       if (!res.ok) throw new Error(resData.error);
+      
+      await logClientAction(projectId, "Viabilidad", `generó un nuevo análisis de viabilidad (Score: ${resData.probability}/100)`);
+      
       setData(resData);
       router.refresh();
     } catch (e) { console.error(e); } finally { setAnalyzing(false); }
@@ -62,6 +66,9 @@ export function AnalisisViabilidadIA({ projectId, hasClient, initialReport }: { 
         body: JSON.stringify({ projectId }),
       });
       if (!res.ok) throw new Error("Error generando PDF");
+      
+      await logClientAction(projectId, "Viabilidad", "descargó el certificado oficial de viabilidad");
+
       const blob = await res.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");

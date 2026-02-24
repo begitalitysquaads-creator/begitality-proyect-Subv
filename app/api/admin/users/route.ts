@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
+import { isAdmin } from "@/lib/auth";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -8,6 +9,10 @@ const supabaseAdmin = createClient(
 
 export async function GET() {
   try {
+    if (!await isAdmin()) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const { data: profiles, error: profileError } = await supabaseAdmin
       .from("profiles")
       .select("*")
@@ -48,6 +53,10 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
+    if (!await isAdmin()) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const { email, full_name, role } = await req.json();
 
     // 1. Invitar al usuario por email (Supabase maneja el envío del correo)
@@ -83,6 +92,10 @@ export async function POST(req: Request) {
 
 export async function PATCH(req: Request) {
   try {
+    if (!await isAdmin()) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const { id, full_name, role, is_active, email } = await req.json();
     if (!id) return NextResponse.json({ error: "ID requerido" }, { status: 400 });
 
@@ -109,6 +122,10 @@ export async function PATCH(req: Request) {
 
 export async function DELETE(req: Request) {
   try {
+    if (!await isAdmin()) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const { searchParams } = new URL(req.url);
     const userId = searchParams.get("id");
     if (!userId) return NextResponse.json({ error: "ID requerido" }, { status: 400 });

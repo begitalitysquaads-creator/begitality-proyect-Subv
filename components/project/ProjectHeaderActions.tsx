@@ -7,6 +7,8 @@ import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 
+import { logClientAction } from "@/lib/audit-client";
+
 interface ProjectHeaderActionsProps {
   projectId: string;
   projectName: string;
@@ -29,6 +31,8 @@ export function ProjectHeaderActions({ projectId, projectName, isArchived }: Pro
       .eq("id", projectId);
 
     if (!error) {
+      const actionDesc = nextStatus === 'archived' ? 'archivó' : 'restauró';
+      await logClientAction(projectId, "Proyecto", `${actionDesc} el expediente "${projectName}"`);
       setConfirmOpen(false);
       router.refresh();
     }
@@ -40,9 +44,9 @@ export function ProjectHeaderActions({ projectId, projectName, isArchived }: Pro
       <button 
         onClick={() => setConfirmOpen(true)}
         className={cn(
-          "flex items-center gap-2 px-6 py-3.5 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all shadow-xl active:scale-95 border shrink-0",
+          "flex items-center gap-2 px-6 py-3.5 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all active:scale-95 border shrink-0",
           isArchived 
-            ? "bg-blue-600 text-white border-blue-600 shadow-blue-600/20 hover:bg-blue-500" 
+            ? "bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-600/20 hover:bg-blue-500" 
             : "bg-white border-slate-200 text-slate-400 hover:text-amber-600 hover:border-amber-500 hover:shadow-amber-500/10 shadow-sm"
         )}
       >

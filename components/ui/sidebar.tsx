@@ -11,17 +11,17 @@ import {
   Zap,
   LogOut,
   Shield,
-  Settings,
+  CalendarDays,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 import { useState, useEffect } from "react";
-import * as Avatar from "@radix-ui/react-avatar";
 import * as Separator from "@radix-ui/react-separator";
 import * as ScrollArea from "@radix-ui/react-scroll-area";
 
 const navItems = [
   { href: "/dashboard", icon: LayoutDashboard, label: "Panel" },
+  { href: "/dashboard/calendar", icon: CalendarDays, label: "Calendario" },
   { href: "/dashboard/projects", icon: FileText, label: "Proyectos" },
   { href: "/dashboard/clients", icon: Users, label: "Clientes" },
   { href: "/dashboard/history", icon: Briefcase, label: "Histórico" },
@@ -29,7 +29,7 @@ const navItems = [
 
 export function AppSidebar() {
   const pathname = usePathname();
-  const [profile, setProfile] = useState<{name: string, role: string} | null>(null);
+  const [profile, setProfile] = useState<{ name: string, role: string } | null>(null);
   const supabase = createClient();
 
   useEffect(() => {
@@ -42,7 +42,7 @@ export function AppSidebar() {
         .select("full_name, role")
         .eq("id", user.id)
         .single();
-      
+
       if (data) {
         setProfile({
           name: data.full_name || "Consultor",

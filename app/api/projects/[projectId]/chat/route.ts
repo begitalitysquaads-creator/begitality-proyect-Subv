@@ -64,7 +64,7 @@ export async function POST(
   try {
     const genAI = new GoogleGenerativeAI(geminiKey);
     const model = genAI.getGenerativeModel({ 
-      model: "gemini-1.5-flash",
+      model: "gemini-3-flash-preview",
       systemInstruction: { 
         role: "system", 
         parts: [{ text: `Eres el Master Assist de Begitality, Consultor Senior experto en Subvenciones Públicas. 
@@ -85,7 +85,7 @@ export async function POST(
         INFORMACIÓN RECUPERADA DE LAS BASES (Prioridad Alta):
         ${contextText}` }] 
       }
-    }, { apiVersion: 'v1' });
+    }, { apiVersion: 'v1beta' });
 
     const chat = model.startChat({
       history: history.slice(-6).map((msg: any) => ({
