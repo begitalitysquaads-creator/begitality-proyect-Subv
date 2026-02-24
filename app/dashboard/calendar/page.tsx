@@ -22,7 +22,8 @@ import {
     User as UserIcon,
     ChevronDown,
     Flag,
-    Briefcase
+    Briefcase,
+    ShieldCheck
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PremiumSelector } from "@/components/ui/PremiumSelector";
