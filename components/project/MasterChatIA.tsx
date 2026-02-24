@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
+import { logClientAction } from "@/lib/audit-client";
 
 interface Message {
   role: 'user' | 'assistant';
@@ -27,6 +28,7 @@ export function MasterChatIA({ projectId }: { projectId: string }) {
   const [showHelp, setShowHelp] = useState(false);
   const [focusId, setFocusId] = useState<string>("global");
   const [showFocusSelector, setShowFocusSelector] = useState(false);
+  const isInitialLoad = useRef(true);
   
   const chatEndRef = useRef<HTMLDivElement>(null);
   const helpRef = useRef<HTMLDivElement>(null);
@@ -60,6 +62,10 @@ export function MasterChatIA({ projectId }: { projectId: string }) {
   }, [projectId]);
 
   useEffect(() => {
+    if (isInitialLoad.current) {
+      isInitialLoad.current = false;
+      return;
+    }
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
@@ -108,6 +114,7 @@ export function MasterChatIA({ projectId }: { projectId: string }) {
       }
 
       if (data.answer) {
+        await logClientAction(projectId, "IA: Chat", `consultó al asistente sobre: "${userMsg.slice(0, 50)}${userMsg.length > 50 ? '...' : ''}"`);
         setMessages(prev => [...prev, { role: 'assistant', content: data.answer }]);
       }
     } catch (e: any) {

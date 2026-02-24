@@ -44,7 +44,7 @@ export default function DashboardPage() {
           )
         `)
         .not("status", "eq", "archived")
-        .order("updated_at", { ascending: false });
+        .order("last_accessed_at", { ascending: false });
 
       if (error) {
         console.error("Error loading projects:", error.message || error);
