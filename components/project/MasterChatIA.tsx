@@ -28,7 +28,7 @@ export function MasterChatIA({ projectId }: { projectId: string }) {
   const [showHelp, setShowHelp] = useState(false);
   const [focusId, setFocusId] = useState<string>("global");
   const [showFocusSelector, setShowFocusSelector] = useState(false);
-  const isInitialLoad = useRef(true);
+  const prevMessagesCount = useRef(-1);
   
   const chatEndRef = useRef<HTMLDivElement>(null);
   const helpRef = useRef<HTMLDivElement>(null);
@@ -62,11 +62,16 @@ export function MasterChatIA({ projectId }: { projectId: string }) {
   }, [projectId]);
 
   useEffect(() => {
-    if (isInitialLoad.current) {
-      isInitialLoad.current = false;
-      return;
+    // Si prevMessagesCount es -1, significa que todavía no hemos cargado el historial inicial.
+    // Solo hacemos scroll si ya hay un conteo previo (historial cargado)
+    // y el nuevo conteo es mayor.
+    if (prevMessagesCount.current !== -1 && messages.length > prevMessagesCount.current) {
+      chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }
-    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    
+    // Si los mensajes cambian, actualizamos el contador para la próxima vez.
+    // Pero solo si ya se cargó el historial (o es la primera vez que se carga)
+    prevMessagesCount.current = messages.length;
   }, [messages]);
 
   const loadChatHistory = async () => {
