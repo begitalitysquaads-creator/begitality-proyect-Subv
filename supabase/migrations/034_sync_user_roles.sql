@@ -1,16 +1,16 @@
 -- 034_sync_user_roles.sql
--- Objetivo: Sincronizar el campo 'role' de public.profiles con auth.users.app_metadata.
+-- Objetivo: Sincronizar el campo 'role' de public.profiles con auth.users.raw_app_meta_data.
 -- Esto es crucial para que el middleware de Next.js pueda leer el rol del usuario de forma eficiente sin consultar la DB.
 
 -- 1. Función para sincronizar el rol
 CREATE OR REPLACE FUNCTION public.handle_sync_user_role()
 RETURNS TRIGGER AS $$
 BEGIN
-  -- Actualizamos los metadatos de la tabla auth.users
-  -- Esto requiere que el trigger se ejecute con permisos suficientes (SECURITY DEFINER)
+  -- Actualizamos los metadatos de la tabla auth.users (esquema interno de Supabase)
+  -- El nombre correcto de la columna es raw_app_meta_data
   UPDATE auth.users
-  SET raw_app_metadata_data = 
-    coalesce(raw_app_metadata_data, '{}'::jsonb) || 
+  SET raw_app_meta_data = 
+    coalesce(raw_app_meta_data, '{}'::jsonb) || 
     jsonb_build_object('role', NEW.role)
   WHERE id = NEW.id;
   
@@ -26,6 +26,5 @@ CREATE TRIGGER on_profile_role_sync
   EXECUTE FUNCTION public.handle_sync_user_role();
 
 -- 3. Sincronización inicial para usuarios existentes
--- Ejecutamos una actualización en todos los perfiles para disparar el trigger
--- y que todos los usuarios actuales tengan su rol en app_metadata.
+-- Esto disparará el trigger para todos y actualizará auth.users
 UPDATE public.profiles SET role = role;
