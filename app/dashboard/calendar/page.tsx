@@ -23,7 +23,8 @@ import {
     ChevronDown,
     Flag,
     Briefcase,
-    ShieldCheck
+    ShieldCheck,
+    Archive
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PremiumSelector } from "@/components/ui/PremiumSelector";
@@ -158,7 +159,14 @@ export default function CalendarPage() {
     const selectedEvents = selectedDateKey ? eventMap[selectedDateKey] ?? [] : [];
 
     // Stats
-    const overdue = filteredEvents.filter((e) => getDaysUntil(e.date) < 0 && e.status !== 'completed' && e.status !== 'finished').length;
+    const overdue = filteredEvents.filter((e) => {
+        const isOverdue = getDaysUntil(e.date) < 0;
+        const isProjectFinished = e.projectStatus === 'finished';
+        const isHitoCompleted = e.status === 'completed';
+        const isFinishedEvent = e.type === 'project_finished';
+        
+        return isOverdue && !isProjectFinished && !isHitoCompleted && !isFinishedEvent;
+    }).length;
     const thisWeek = filteredEvents.filter((e) => {
         const d = getDaysUntil(e.date);
         return d >= 0 && d <= 7;
