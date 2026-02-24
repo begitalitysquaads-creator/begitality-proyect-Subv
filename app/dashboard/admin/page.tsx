@@ -21,6 +21,9 @@ interface Profile {
   role: UserRole;
   is_active: boolean;
   created_at: string;
+  last_login: string | null;
+  phone_number: string | null;
+  bio: string | null;
   has_authenticated: boolean;
   assigned_projects: any[];
   project_count: number;
@@ -30,7 +33,7 @@ const ROLES: { id: UserRole; label: string; icon: any; color: string; activeColo
   { id: 'admin', label: 'Admin', icon: ShieldCheck, color: 'text-slate-400 border-slate-200 hover:border-slate-900 hover:text-slate-900', activeColor: 'bg-slate-900 text-white border-slate-900 shadow-xl shadow-slate-900/20' },
   { id: 'senior_consultant', label: 'Senior', icon: User, color: 'text-slate-400 border-slate-200 hover:border-blue-600 hover:text-blue-600', activeColor: 'bg-blue-600 text-white border-blue-600 shadow-xl shadow-blue-600/20' },
   { id: 'junior_consultant', label: 'Junior', icon: User, color: 'text-slate-400 border-slate-200 hover:border-blue-400 hover:text-blue-400', activeColor: 'bg-blue-400 text-white border-blue-400 shadow-xl shadow-blue-400/20' },
-  { id: 'auditor', label: 'Auditor', icon: ShieldAlert, color: 'text-slate-400 border-slate-200 hover:border-amber-500 hover:text-amber-500', activeColor: 'bg-amber-500 text-white border-amber-500 shadow-xl shadow-amber-500/20' },
+  { id: 'auditor', label: 'Auditor', icon: ShieldAlert, color: 'text-slate-400 border-slate-200 hover:border-amber-500 hover:text-amber-500', activeColor: 'bg-amber-50 text-white border-amber-500 shadow-xl shadow-amber-500/20' },
   { id: 'viewer', label: 'Lector', icon: Eye, color: 'text-slate-400 border-slate-200 hover:border-emerald-500 hover:text-emerald-500', activeColor: 'bg-emerald-500 text-white border-emerald-500 shadow-xl shadow-emerald-500/20' },
 ];
 
@@ -72,6 +75,22 @@ export default function AdminPage() {
     async function setup() {
       const { data: { user } } = await supabase.auth.getUser();
       setCurrentUserId(user?.id || null);
+
+      // Verificación de seguridad adicional en cliente por si el middleware falló o el token no se refrescó
+      if (user) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("role")
+          .eq("id", user.id)
+          .single();
+        
+        if (profile?.role !== 'admin') {
+          // Si no es admin, redirigir al dashboard (ya lo hace el middleware pero esto es refuerzo)
+          window.location.href = "/dashboard";
+          return;
+        }
+      }
+      
       fetchUsers();
     }
     setup();
@@ -365,8 +384,12 @@ export default function AdminPage() {
                 
                 <div className="flex items-center gap-4">
                   <div className="text-right hidden md:block mr-4">
+                    <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest leading-none mb-1">Actividad</p>
+                    <p className="text-xs font-bold text-slate-500">{u.last_login ? new Date(u.last_login).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' }) : 'Nunca'}</p>
+                  </div>
+                  <div className="text-right hidden md:block mr-4 border-l border-slate-100 pl-4">
                     <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest leading-none mb-1">Registro</p>
-                    <p className="text-xs font-bold text-slate-500">{new Date(u.created_at).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
+                    <p className="text-xs font-bold text-slate-500">{new Date(u.created_at).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' })}</p>
                   </div>
                   
                   <div className="flex items-center gap-2">
