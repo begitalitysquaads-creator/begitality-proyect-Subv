@@ -19,18 +19,18 @@ interface AuditLog {
   };
 }
 
-export function AuditLogViewer({ projectId }: { projectId: string }) {
+export function AuditLogViewer({ projectId, isGlobal = false }: { projectId?: string, isGlobal?: boolean }) {
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [loading, setLoading] = useState(true);
   const supabase = createClient();
 
   useEffect(() => {
-    // Asegurar que la página empiece arriba
-    window.scrollTo(0, 0);
+    // Asegurar que la página empiece arriba si no es global (en el dashboard)
+    if (!isGlobal) window.scrollTo(0, 0);
 
     const fetchLogs = async () => {
       try {
-        const { data, error } = await supabase
+        let query = supabase
           .from("audit_logs")
           .select(`
             *,
@@ -40,9 +40,14 @@ export function AuditLogViewer({ projectId }: { projectId: string }) {
               avatar_url
             )
           `)
-          .eq("project_id", projectId)
           .order("created_at", { ascending: false })
-          .limit(20);
+          .limit(isGlobal ? 50 : 20);
+        
+        if (projectId) {
+          query = query.eq("project_id", projectId);
+        }
+        
+        const { data, error } = await query;
         
         if (error) {
           console.error("Error fetching audit logs:", error);
@@ -67,16 +72,21 @@ export function AuditLogViewer({ projectId }: { projectId: string }) {
 
     // Realtime subscription
     const channel = supabase
-      .channel('audit_logs')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'audit_logs', filter: `project_id=eq.${projectId}` }, 
-        (payload) => {
-          fetchLogs(); // Refresh full list to get user data easily
+      .channel('audit_logs_channel')
+      .on('postgres_changes', { 
+        event: 'INSERT', 
+        schema: 'public', 
+        table: 'audit_logs', 
+        filter: projectId ? `project_id=eq.${projectId}` : undefined 
+      }, 
+        () => {
+          fetchLogs();
         }
       )
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  }, [projectId, supabase]);
+  }, [projectId, isGlobal, supabase]);
 
   const getIcon = (action: string) => {
     if (action.includes("IA") || action.includes("Diagnóstico")) return <Bot size={14} className="text-blue-600" />;
@@ -137,9 +147,14 @@ export function AuditLogViewer({ projectId }: { projectId: string }) {
                     </div>
                     {log.action}
                   </span>
-                  <span className="text-[8px] font-black text-slate-300 uppercase tracking-tighter">
-                    {formatDistanceToNow(new Date(log.created_at), { addSuffix: true, locale: es })}
-                  </span>
+                  <StyledTooltip content={new Date(log.created_at).toLocaleString('es-ES', { 
+                    day: '2-digit', month: '2-digit', year: 'numeric', 
+                    hour: '2-digit', minute: '2-digit', second: '2-digit' 
+                  })}>
+                    <span className="text-[8px] font-black text-slate-300 uppercase tracking-tighter cursor-help">
+                      {formatDistanceToNow(new Date(log.created_at), { addSuffix: true, locale: es })}
+                    </span>
+                  </StyledTooltip>
                 </div>
                 <p className="text-[11px] font-bold text-slate-700 leading-snug">
                   <span className="text-slate-900 font-black">{log.user?.full_name || "Usuario"}</span> 

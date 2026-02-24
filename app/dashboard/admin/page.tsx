@@ -13,6 +13,7 @@ import * as Dialog from "@radix-ui/react-dialog";
 import { UserRole } from "@/lib/types";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { StyledTooltip } from "@/components/ui/Tooltip";
+import { AuditLogViewer } from "@/components/project/AuditLogViewer";
 
 interface Profile {
   id: string;
@@ -385,11 +386,19 @@ export default function AdminPage() {
                 <div className="flex items-center gap-4">
                   <div className="text-right hidden md:block mr-4">
                     <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest leading-none mb-1">Actividad</p>
-                    <p className="text-xs font-bold text-slate-500">{u.last_login ? new Date(u.last_login).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' }) : 'Nunca'}</p>
+                    <StyledTooltip content={u.last_login ? new Date(u.last_login).toLocaleString('es-ES') : "Nunca"}>
+                      <p className="text-xs font-bold text-slate-500 cursor-help">
+                        {u.last_login ? new Date(u.last_login).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' }) : 'Nunca'}
+                      </p>
+                    </StyledTooltip>
                   </div>
                   <div className="text-right hidden md:block mr-4 border-l border-slate-100 pl-4">
                     <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest leading-none mb-1">Registro</p>
-                    <p className="text-xs font-bold text-slate-500">{new Date(u.created_at).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' })}</p>
+                    <StyledTooltip content={new Date(u.created_at).toLocaleString('es-ES')}>
+                      <p className="text-xs font-bold text-slate-500 cursor-help">
+                        {new Date(u.created_at).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                      </p>
+                    </StyledTooltip>
                   </div>
                   
                   <div className="flex items-center gap-2">
@@ -438,6 +447,15 @@ export default function AdminPage() {
             ))}
           </div>
         )}
+      </div>
+
+      {/* GLOBAL ACTIVITY FEED */}
+      <div className="space-y-6">
+        <div className="px-2">
+          <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tight">Actividad del Sistema</h2>
+          <p className="text-slate-500 text-sm font-medium">Historial completo de acciones técnicas en tiempo real</p>
+        </div>
+        <AuditLogViewer isGlobal={true} />
       </div>
 
       {/* CONFIRM DELETE DIALOG */}
