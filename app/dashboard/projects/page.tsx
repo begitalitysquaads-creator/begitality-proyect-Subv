@@ -312,14 +312,20 @@ export default function ProjectsPage() {
                         </button>
                       )}
                       <span className={cn(
-                        "text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest",
-                        p.status === "finished" ? "bg-emerald-50 text-emerald-700" :
-                        p.status === "ready_export" ? "bg-emerald-50 text-emerald-700" :
-                          p.status === "archived" ? "bg-amber-50 text-amber-700" : "bg-slate-100 text-slate-600"
+                        "text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest border",
+                        p.status === "finished" ? "bg-emerald-600 text-white border-emerald-600" :
+                        p.status === "ready_export" ? "bg-emerald-50 text-emerald-700 border-emerald-100" :
+                        p.status === "exported" ? "bg-indigo-50 text-indigo-600 border-indigo-100" :
+                        p.status === "archived" ? "bg-amber-50 text-amber-700 border-amber-100" : 
+                        p.status === "draft" ? "bg-slate-50 text-slate-500 border-slate-100" :
+                        "bg-blue-50 text-blue-600 border-blue-100"
                       )}>
                         {p.status === "finished" ? "Finalizado" : 
                          p.status === "ready_export" ? "Listo" : 
-                         p.status === "archived" ? "Archivado" : "En curso"}
+                         p.status === "exported" ? "Exportado" :
+                         p.status === "archived" ? "Archivado" : 
+                         p.status === "draft" ? "Borrador" :
+                         "En curso"}
                       </span>
                       <div className="p-2 bg-slate-50 rounded-xl text-slate-300 group-hover:bg-blue-50 group-hover:text-blue-600 transition-all shadow-inner">
                         <ChevronRight size={20} />
