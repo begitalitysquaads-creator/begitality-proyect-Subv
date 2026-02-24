@@ -29,7 +29,7 @@ export default function HistoryPage() {
       const { data, error } = await supabase
         .from("projects")
         .select("*, client:clients(*)")
-        .in("status", ["exported", "archived"])
+        .in("status", ["exported", "archived", "finished"])
         .order("updated_at", { ascending: false });
 
       if (error) {
@@ -168,18 +168,26 @@ export default function HistoryPage() {
               <Link href={p.status === 'exported' ? `/dashboard/projects/${p.id}/export` : `/dashboard/projects/${p.id}`} className="flex items-center gap-6 flex-1">
                 <div className={cn(
                   "w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg transition-transform group-hover:rotate-3",
-                  p.status === 'archived' ? "bg-slate-100 text-slate-400" : "bg-blue-600 text-white shadow-blue-600/20"
+                  p.status === 'archived' ? "bg-slate-100 text-slate-400 shadow-none border border-slate-200" : 
+                  p.status === 'finished' ? "bg-emerald-600 text-white shadow-emerald-600/20" :
+                  "bg-blue-600 text-white shadow-blue-600/20"
                 )}>
-                  {p.status === 'archived' ? <Archive size={28} /> : <FileText size={28} />}
+                  {p.status === 'archived' ? <Archive size={28} /> : 
+                   p.status === 'finished' ? <ShieldCheck size={28} /> : 
+                   <FileText size={28} />}
                 </div>
                 <div>
                   <div className="flex items-center gap-3 mb-1">
                     <h3 className="text-xl font-black text-slate-900 tracking-tight">{p.name}</h3>
                     <span className={cn(
                       "text-[8px] font-black uppercase tracking-widest px-2.5 py-1 rounded-lg border",
-                      p.status === 'exported' ? "bg-emerald-50 text-emerald-600 border-emerald-100" : "bg-amber-50 text-amber-600 border-amber-100"
+                      p.status === 'finished' ? "bg-emerald-50 text-emerald-600 border-emerald-100" : 
+                      p.status === 'exported' ? "bg-blue-50 text-blue-600 border-blue-100" :
+                      "bg-amber-50 text-amber-600 border-amber-100"
                     )}>
-                      {p.status === 'exported' ? 'Finalizado' : 'Archivado'}
+                      {p.status === 'finished' ? 'Finalizado' : 
+                       p.status === 'exported' ? 'Exportado' : 
+                       'Archivado'}
                     </span>
                   </div>
                   <div className="flex items-center gap-4">

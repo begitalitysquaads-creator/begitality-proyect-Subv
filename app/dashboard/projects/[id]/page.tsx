@@ -132,8 +132,8 @@ export default async function ProjectWorkspacePage({
           className="p-2 hover:bg-slate-100 rounded-full transition-all mt-1.5 border border-transparent hover:border-slate-200 shadow-sm"
         />
         <div className="flex-1 min-w-0">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-3">
-            <ProjectInlineActions projectId={id} projectName={project.name} isArchived={isArchived} />
+          <div className="flex-col md:flex-row md:items-center justify-between gap-4 mb-3 flex">
+            <ProjectInlineActions projectId={id} projectName={project.name} projectStatus={project.status} />
             
             <div className="flex items-center gap-3 shrink-0">
               <Link
