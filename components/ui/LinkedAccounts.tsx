@@ -46,7 +46,12 @@ export function LinkedAccounts() {
       provider: 'google',
       options: {
         redirectTo: `${window.location.origin}/dashboard/profile?linked=true`,
-        queryParams: { login_hint: userEmail, prompt: 'select_account' }
+        queryParams: { 
+          login_hint: userEmail, 
+          prompt: 'select_account',
+          access_type: 'offline', // Para intentar obtener refresh_token si fuera necesario en el futuro
+        },
+        scopes: 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/drive.metadata.readonly'
       }
     });
     if (linkError) {

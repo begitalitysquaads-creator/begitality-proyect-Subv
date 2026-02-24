@@ -17,7 +17,7 @@ function LoginForm() {
   const [error, setError] = useState<string | null>(null);
   const [showMfa, setShowMfa] = useState(false);
   const [factorId, setFactorId] = useState<string | null>(null);
-  
+
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirect = searchParams.get("redirect") ?? "/dashboard";
@@ -59,7 +59,7 @@ function LoginForm() {
     }
 
     const { data: factors, error: mfaError } = await supabase.auth.mfa.listFactors();
-    
+
     if (mfaError) {
       setError(mfaError.message);
       setLoading(false);
@@ -67,7 +67,7 @@ function LoginForm() {
     }
 
     const activeFactor = factors.all.find(f => f.status === 'verified');
-    
+
     if (activeFactor) {
       setFactorId(activeFactor.id);
       setShowMfa(true);
@@ -84,7 +84,7 @@ function LoginForm() {
     setError(null);
 
     const { data: challenge, error: challengeError } = await supabase.auth.mfa.challenge({ factorId: factorId! });
-    
+
     if (challengeError) {
       setError(challengeError.message);
       setLoading(false);
@@ -109,24 +109,28 @@ function LoginForm() {
   async function handleGoogleLogin() {
     setGoogleLoading(true);
     setError(null);
-    
-    // El flujo de Google ahora solo permitirá el acceso si el correo ya existe.
-    // Usamos Supabase OAuth que por defecto no crea una cuenta nueva si "Allow new users" está desactivado en el dashboard.
-    // Pero para ser más explícitos y manejar el error, informamos que es solo para invitados.
+
+    // La verificación real ocurre server-side en /auth/callback
+    // Si el email de Google no fue invitado previamente, el callback lo rechazará y limpiará.
     const { error: err } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
         redirectTo: `${window.location.origin}/auth/callback?redirect=${redirect}`,
-        // Impide que se cree una cuenta si no existe el email en el sistema (requiere config en Supabase Dashboard)
-        // Pero añadimos un mensaje preventivo si falla.
+        queryParams: {
+          ...(email ? { login_hint: email } : {}),
+          prompt: 'select_account',
+          access_type: 'offline',
+        },
+        scopes: 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/drive.metadata.readonly'
       },
     });
-    
+
     if (err) {
       setError(err.message);
       setGoogleLoading(false);
     }
   }
+
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-[#F8FAFC] px-4">
@@ -214,7 +218,7 @@ function LoginForm() {
                   <ShieldCheck size={32} />
                 </div>
               </div>
-              
+
               <div className="space-y-2">
                 <Label.Root className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1 block text-center">Código TOTP</Label.Root>
                 <input

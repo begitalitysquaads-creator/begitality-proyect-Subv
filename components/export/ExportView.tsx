@@ -14,10 +14,13 @@ import {
   Zap,
   Loader2,
   CheckCircle2,
+  Cloud,
+  FolderOpen,
 } from "lucide-react";
 import { BackButton } from "@/components/ui/BackButton";
 import { StyledTooltip } from "@/components/ui/Tooltip";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { logClientAction } from "@/lib/audit-client";
 
 interface SectionData {
   id: string;
@@ -78,6 +81,10 @@ function downloadBlob(blob: Blob, filename: string) {
 
 export function ExportView({ project }: ExportViewProps) {
   const [isExporting, setIsExporting] = useState(false);
+  const [isDriveModalOpen, setIsDriveModalOpen] = useState(false);
+  const [driveFolders, setDriveFolders] = useState<{id: string, name: string}[]>([]);
+  const [selectedFolderId, setSelectedFolderId] = useState<string>("root");
+  const [isLoadingFolders, setIsLoadingFolders] = useState(false);
   const [exportComplete, setExportComplete] = useState(false);
   const [alertDialog, setAlertDialog] = useState<{open: boolean, title: string, description: string}>({
     open: false, title: "", description: ""
@@ -87,7 +94,10 @@ export function ExportView({ project }: ExportViewProps) {
   const completedSections = sections.filter(s => s.is_completed).length;
   const totalSections = sections.length;
   const progressPercent = totalSections > 0 ? Math.round((completedSections / totalSections) * 100) : 0;
+  
   const hasContent = sections.some(s => s.content && s.content.trim().length > 0);
+  // Si hay contenido pero 0% completado, podríamos sugerir marcar secciones como revisadas
+  const hasUnmarkedContent = !completedSections && hasContent;
 
   const doExport = async (format: "pdf" | "docx") => {
     setIsExporting(true);
@@ -107,6 +117,9 @@ export function ExportView({ project }: ExportViewProps) {
       const match = disposition?.match(/filename="?([^";\n]+)"?/);
       const filename = match?.[1] ?? `Memoria_Tecnica.${format}`;
       downloadBlob(blob, filename);
+      
+      await logClientAction(project.id, "Documentación", `exportó el expediente en formato ${format.toUpperCase()}`);
+      
       setExportComplete(true);
     } catch (e) {
       console.error(e);
@@ -123,6 +136,105 @@ export function ExportView({ project }: ExportViewProps) {
 
   const handleExportDocx = () => doExport("docx");
   const handleExportPdf = () => doExport("pdf");
+
+  const handlePrint = async () => {
+    setIsExporting(true);
+    try {
+      const res = await fetch("/api/export", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ projectId: project.id, format: "pdf" }),
+      });
+      if (!res.ok) throw new Error("Error al generar PDF para impresión");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      
+      // Crear un iframe invisible para imprimir
+      const iframe = document.createElement('iframe');
+      iframe.style.display = 'none';
+      iframe.src = url;
+      document.body.appendChild(iframe);
+      
+      iframe.onload = () => {
+        iframe.contentWindow?.print();
+        // Limpieza después de un tiempo para asegurar que la impresión se lance
+        setTimeout(() => {
+          document.body.removeChild(iframe);
+          URL.revokeObjectURL(url);
+        }, 1000);
+      };
+    } catch (e) {
+      console.error(e);
+      setAlertDialog({
+        open: true,
+        title: "Error de impresión",
+        description: "No se pudo generar el documento para imprimir."
+      });
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const fetchDriveFolders = async () => {
+    setIsLoadingFolders(true);
+    try {
+      const res = await fetch("/api/export/google-drive/folders");
+      
+      if (res.status === 401 || res.status === 403) {
+        const errorData = await res.json().catch(() => ({}));
+        setAlertDialog({
+          open: true,
+          title: res.status === 401 ? "Cuenta no vinculada" : "Permisos faltantes",
+          description: errorData.detail || "No hemos detectado una vinculación activa con Google Drive o faltan permisos. Por favor, asegúrate de haber iniciado sesión con Google y concedido permisos de Drive."
+        });
+        return;
+      }
+
+      if (!res.ok) throw new Error("Error al obtener carpetas de Drive");
+      
+      const data = await res.json();
+      setDriveFolders(data.folders || []);
+      setIsDriveModalOpen(true);
+    } catch (e) {
+      setAlertDialog({
+        open: true,
+        title: "Error de conexión",
+        description: "No se pudo conectar con el servicio de Google Drive. Inténtalo de nuevo más tarde."
+      });
+    } finally {
+      setIsLoadingFolders(false);
+    }
+  };
+
+  const handleDriveUpload = async () => {
+    setIsExporting(true);
+    setIsDriveModalOpen(false);
+    try {
+      const res = await fetch("/api/export/google-drive/upload", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          projectId: project.id, 
+          folderId: selectedFolderId === "root" ? null : selectedFolderId 
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Error al subir a Drive");
+      }
+      
+      await logClientAction(project.id, "Documentación", `subió el expediente a Google Drive`);
+      setExportComplete(true);
+    } catch (e) {
+      setAlertDialog({
+        open: true,
+        title: "Error en Google Drive",
+        description: e instanceof Error ? e.message : "Ocurrió un error al subir el archivo."
+      });
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   return (
     <div className="max-w-5xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -169,10 +281,11 @@ export function ExportView({ project }: ExportViewProps) {
                 <StyledTooltip content="Imprimir documento">
                   <button
                     type="button"
-                    onClick={() => window.print()}
-                    className="p-3 hover:bg-white rounded-2xl text-slate-400 hover:text-slate-900 transition-all shadow-sm border border-transparent hover:border-slate-100 active:scale-95"
+                    onClick={handlePrint}
+                    disabled={isExporting || !hasContent}
+                    className="p-3 hover:bg-white rounded-2xl text-slate-400 hover:text-slate-900 transition-all shadow-sm border border-transparent hover:border-slate-100 active:scale-95 disabled:opacity-50"
                   >
-                    <Printer size={20} />
+                    {isExporting ? <Loader2 size={20} className="animate-spin" /> : <Printer size={20} />}
                   </button>
                 </StyledTooltip>
               </div>
@@ -223,6 +336,11 @@ export function ExportView({ project }: ExportViewProps) {
             <h3 className="text-xl font-bold mb-2">
               {progressPercent === 100 ? "¿Todo listo?" : "Trabajo en curso"}
             </h3>
+            {hasUnmarkedContent && (
+              <p className="text-amber-400 text-[10px] mb-2 font-bold uppercase tracking-wider animate-pulse">
+                ⚠️ Hay contenido sin marcar como REVISADO
+              </p>
+            )}
             <p className="text-slate-400 text-sm mb-6 font-medium">
               {progressPercent === 100 
                 ? "Hemos analizado el documento y cumple con el 100% de los requisitos detectados."
@@ -284,6 +402,13 @@ export function ExportView({ project }: ExportViewProps) {
               onClick={handleExportPdf}
               tooltip="Descargar en formato final .pdf"
             />
+            <ExportCard
+              type="Drive"
+              title="Google Drive"
+              icon={Cloud}
+              onClick={fetchDriveFolders}
+              tooltip="Guardar directamente en tu Google Drive"
+            />
           </div>
 
           {exportComplete && (
@@ -308,6 +433,35 @@ export function ExportView({ project }: ExportViewProps) {
         variant="danger"
         onConfirm={() => setAlertDialog({...alertDialog, open: false})}
       />
+
+      <ConfirmDialog 
+        open={isDriveModalOpen}
+        onOpenChange={setIsDriveModalOpen}
+        title="SUBIR A GOOGLE DRIVE"
+        description="Selecciona la carpeta de destino para guardar la memoria técnica."
+        confirmText={isExporting ? "Subiendo..." : "Subir ahora"}
+        variant="info"
+        onConfirm={handleDriveUpload}
+      >
+        <div className="mt-6 space-y-4">
+          <div className="flex items-center gap-3 p-4 bg-blue-50 border border-blue-100 rounded-2xl">
+            <FolderOpen size={20} className="text-blue-600" />
+            <select 
+              value={selectedFolderId}
+              onChange={(e) => setSelectedFolderId(e.target.value)}
+              className="flex-1 bg-transparent text-sm font-bold text-blue-900 outline-none appearance-none cursor-pointer"
+            >
+              <option value="root">Mi Unidad (Raíz)</option>
+              {driveFolders.map(f => (
+                <option key={f.id} value={f.id}>{f.name}</option>
+              ))}
+            </select>
+          </div>
+          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest text-center">
+            Se generará un archivo PDF con la versión actual
+          </p>
+        </div>
+      </ConfirmDialog>
     </div>
   );
 }

@@ -9,7 +9,11 @@ Para habilitar el Inicio de Sesión Único (SSO) con Google en tu aplicación, s
 4. Haz clic en **Configure Consent Screen**:
    - Tipo de usuario: Externo.
    - Completa la información básica (App name, support email, etc.).
-   - Agrega los alcances (scopes): `.../auth/userinfo.email` y `.../auth/userinfo.profile`.
+   - Agrega los alcances (scopes):
+     - `.../auth/userinfo.email`
+     - `.../auth/userinfo.profile`
+     - `.../auth/drive.file` (Para crear y subir memorias técnicas)
+     - `.../auth/drive.metadata.readonly` (Para listar carpetas)
 5. Haz clic en **Create Credentials > OAuth Client ID**:
    - Application type: Web application.
    - **Authorized redirect URIs**: Agrega la URL de redirección de Supabase.
