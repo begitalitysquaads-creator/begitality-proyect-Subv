@@ -28,7 +28,7 @@ export default function HistoryPage() {
 
       const { data, error } = await supabase
         .from("projects")
-        .select("*, clients(*)")
+        .select("*, client:clients(*)")
         .in("status", ["exported", "archived"])
         .order("updated_at", { ascending: false });
 
@@ -112,7 +112,7 @@ export default function HistoryPage() {
 
     return projects.filter(p => 
       p.name.toLowerCase().includes(s) || 
-      (p.clients?.name || "").toLowerCase().includes(s)
+      (p.client?.name || "").toLowerCase().includes(s)
     );
   }, [projects, search]);
 
@@ -185,7 +185,7 @@ export default function HistoryPage() {
                   <div className="flex items-center gap-4">
                     <div className="flex items-center gap-1.5 text-xs text-slate-500 font-bold">
                       <Building2 size={12} className="text-slate-300" />
-                      {p.clients?.name || "Sin cliente"}
+                      {p.client?.name || "Sin cliente"}
                     </div>
                     <div className="w-1 h-1 bg-slate-200 rounded-full" />
                     <div className="flex items-center gap-1.5 text-xs text-slate-500 font-bold">

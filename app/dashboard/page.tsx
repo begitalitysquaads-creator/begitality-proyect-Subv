@@ -32,12 +32,12 @@ export default function DashboardPage() {
         .from("projects")
         .select(`
           *,
-          clients (
+          client:clients (
             id,
             name
           ),
           collaborators:project_collaborators (
-            profiles!user_id (
+            profiles (
               avatar_url,
               full_name
             )
@@ -51,11 +51,7 @@ export default function DashboardPage() {
       }
 
       if (mounted) {
-        const mappedProjects = (data || []).map(p => ({
-          ...p,
-          client: Array.isArray(p.clients) ? p.clients[0] : (p.clients || null)
-        }));
-        setProjects(mappedProjects);
+        setProjects(data || []);
         setLoading(false);
       }
     }
@@ -185,26 +181,6 @@ export default function DashboardPage() {
             ))}
           </div>
         </section>
-      )}
-
-      {/* EMPTY STATE COMPLETO */}
-      {projects.length === 0 && !loading && (
-        <div className="py-20 text-center bg-white border border-slate-100 rounded-[3.5rem] shadow-sm border-dashed">
-          <div className="w-20 h-20 bg-slate-50 rounded-[2rem] flex items-center justify-center mx-auto mb-6 text-slate-200 border border-slate-50">
-            <Sparkles size={40} />
-          </div>
-          <h3 className="text-xl font-black text-slate-900 tracking-tight mb-2">Comienza tu primer expediente</h3>
-          <p className="text-slate-400 font-medium max-w-xs mx-auto mb-8 text-sm">
-            Begitality te ayuda a redactar memorias técnicas profesionales con el poder de la IA contextual.
-          </p>
-          <Link
-            href="/dashboard/projects/new"
-            className="inline-flex items-center gap-3 px-8 py-4 bg-slate-900 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-blue-600 transition-all shadow-xl shadow-slate-900/10 active:scale-95"
-          >
-            <PlusCircle size={18} />
-            Crear mi primer proyecto
-          </Link>
-        </div>
       )}
     </div>
   );
