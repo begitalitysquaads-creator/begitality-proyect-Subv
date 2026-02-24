@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import { StyledTooltip } from "@/components/ui/Tooltip";
 
 interface AuditLog {
   id: string;
