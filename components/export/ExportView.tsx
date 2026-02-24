@@ -16,11 +16,14 @@ import {
   CheckCircle2,
   Cloud,
   FolderOpen,
+  Plus,
 } from "lucide-react";
 import { BackButton } from "@/components/ui/BackButton";
 import { StyledTooltip } from "@/components/ui/Tooltip";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { PremiumSelector } from "@/components/ui/PremiumSelector";
 import { logClientAction } from "@/lib/audit-client";
+import { cn } from "@/lib/utils";
 
 interface SectionData {
   id: string;
@@ -85,6 +88,9 @@ export function ExportView({ project }: ExportViewProps) {
   const [driveFolders, setDriveFolders] = useState<{id: string, name: string}[]>([]);
   const [selectedFolderId, setSelectedFolderId] = useState<string>("root");
   const [isLoadingFolders, setIsLoadingFolders] = useState(false);
+  const [isCreatingFolder, setIsCreatingFolder] = useState(false);
+  const [newFolderName, setNewFolderName] = useState("");
+  const [showNewFolderInput, setShowNewFolderInput] = useState(false);
   const [exportComplete, setExportComplete] = useState(false);
   const [alertDialog, setAlertDialog] = useState<{open: boolean, title: string, description: string}>({
     open: false, title: "", description: ""
@@ -203,6 +209,32 @@ export function ExportView({ project }: ExportViewProps) {
       });
     } finally {
       setIsLoadingFolders(false);
+    }
+  };
+
+  const handleCreateFolder = async () => {
+    if (!newFolderName.trim()) return;
+    setIsCreatingFolder(true);
+    try {
+      const res = await fetch("/api/export/google-drive/folders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: newFolderName, parentId: "root" }),
+      });
+      if (!res.ok) throw new Error("Error al crear carpeta");
+      const newFolder = await res.json();
+      setDriveFolders([newFolder, ...driveFolders]);
+      setSelectedFolderId(newFolder.id);
+      setNewFolderName("");
+      setShowNewFolderInput(false);
+    } catch (e) {
+      setAlertDialog({
+        open: true,
+        title: "Error al crear carpeta",
+        description: "No se pudo crear la carpeta en Google Drive."
+      });
+    } finally {
+      setIsCreatingFolder(false);
     }
   };
 
@@ -444,18 +476,46 @@ export function ExportView({ project }: ExportViewProps) {
         onConfirm={handleDriveUpload}
       >
         <div className="mt-6 space-y-4">
-          <div className="flex items-center gap-3 p-4 bg-blue-50 border border-blue-100 rounded-2xl">
-            <FolderOpen size={20} className="text-blue-600" />
-            <select 
-              value={selectedFolderId}
-              onChange={(e) => setSelectedFolderId(e.target.value)}
-              className="flex-1 bg-transparent text-sm font-bold text-blue-900 outline-none appearance-none cursor-pointer"
-            >
-              <option value="root">Mi Unidad (Raíz)</option>
-              {driveFolders.map(f => (
-                <option key={f.id} value={f.id}>{f.name}</option>
-              ))}
-            </select>
+          <div className="space-y-2">
+            <div className="flex justify-between items-center px-1">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Carpeta de Destino</label>
+              <button 
+                onClick={() => setShowNewFolderInput(!showNewFolderInput)}
+                className="text-[10px] font-black text-blue-600 uppercase tracking-widest hover:text-blue-700 transition-colors flex items-center gap-1"
+              >
+                <Plus size={10} /> {showNewFolderInput ? "Cancelar" : "Nueva Carpeta"}
+              </button>
+            </div>
+            
+            {showNewFolderInput ? (
+              <div className="flex gap-2 animate-in slide-in-from-top-2">
+                <input 
+                  autoFocus
+                  type="text"
+                  placeholder="Nombre de la carpeta..."
+                  value={newFolderName}
+                  onChange={(e) => setNewFolderName(e.target.value)}
+                  className="flex-1 px-4 py-3 bg-white border border-blue-100 rounded-xl text-sm font-bold focus:outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all"
+                />
+                <button
+                  onClick={handleCreateFolder}
+                  disabled={isCreatingFolder || !newFolderName.trim()}
+                  className="px-4 py-3 bg-blue-600 text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-blue-700 transition-all disabled:opacity-50"
+                >
+                  {isCreatingFolder ? <Loader2 size={14} className="animate-spin" /> : "Crear"}
+                </button>
+              </div>
+            ) : (
+              <PremiumSelector 
+                icon={FolderOpen}
+                value={selectedFolderId}
+                onChange={setSelectedFolderId}
+                options={[
+                  { value: "root", label: "Mi Unidad (Raíz)" },
+                  ...driveFolders.map(f => ({ value: f.id, label: f.name }))
+                ]}
+              />
+            )}
           </div>
           <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest text-center">
             Se generará un archivo PDF con la versión actual
