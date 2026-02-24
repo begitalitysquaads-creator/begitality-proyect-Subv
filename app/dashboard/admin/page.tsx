@@ -388,7 +388,10 @@ export default function AdminPage() {
                     <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest leading-none mb-1">Actividad</p>
                     <StyledTooltip content={u.last_login ? new Date(u.last_login).toLocaleString('es-ES') : "Nunca"}>
                       <p className="text-xs font-bold text-slate-500 cursor-help">
-                        {u.last_login ? new Date(u.last_login).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' }) : 'Nunca'}
+                        {u.last_login ? new Date(u.last_login).toLocaleString('es-ES', { 
+                          day: '2-digit', month: '2-digit', year: 'numeric',
+                          hour: '2-digit', minute: '2-digit'
+                        }) : 'Nunca'}
                       </p>
                     </StyledTooltip>
                   </div>
@@ -396,7 +399,10 @@ export default function AdminPage() {
                     <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest leading-none mb-1">Registro</p>
                     <StyledTooltip content={new Date(u.created_at).toLocaleString('es-ES')}>
                       <p className="text-xs font-bold text-slate-500 cursor-help">
-                        {new Date(u.created_at).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                        {new Date(u.created_at).toLocaleString('es-ES', { 
+                          day: '2-digit', month: '2-digit', year: 'numeric',
+                          hour: '2-digit', minute: '2-digit'
+                        })}
                       </p>
                     </StyledTooltip>
                   </div>
