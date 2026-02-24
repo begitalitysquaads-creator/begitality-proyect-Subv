@@ -144,11 +144,6 @@ export default async function ProjectWorkspacePage({
                 Exportar
               </Link>
               <HelpGuide />
-              <ProjectHeaderActions
-                projectId={id}
-                projectName={project.name}
-                isArchived={isArchived}
-              />
             </div>
           </div>
 
