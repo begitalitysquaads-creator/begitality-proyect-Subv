@@ -77,15 +77,12 @@ export function MasterChatIA({ projectId }: { projectId: string }) {
   useEffect(() => {
     if (scrollLockRef.current) return;
 
-    // Si prevMessagesCount es -1, significa que todavía no hemos cargado el historial inicial.
-    // Solo hacemos scroll si ya hay un conteo previo (historial cargado)
-    // y el nuevo conteo es mayor.
     if (prevMessagesCount.current !== -1 && messages.length > prevMessagesCount.current) {
-      chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+      // Usamos block: "nearest" para que NO mueva toda la ventana del navegador,
+      // sino solo el contenedor scrollable más cercano (el chat).
+      chatEndRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
     }
     
-    // Si los mensajes cambian, actualizamos el contador para la próxima vez.
-    // Pero solo si ya se cargó el historial (o es la primera vez que se carga)
     prevMessagesCount.current = messages.length;
   }, [messages]);
 
@@ -176,7 +173,7 @@ export function MasterChatIA({ projectId }: { projectId: string }) {
   };
 
   return (
-    <div className="bg-white border border-slate-200 rounded-[2.5rem] shadow-sm flex flex-col h-[650px] relative overflow-hidden animate-in fade-in duration-700">
+    <div className="bg-white border border-slate-200 rounded-[2.5rem] shadow-sm flex flex-col h-[600px] relative overflow-hidden animate-in fade-in duration-700">
       
       {/* HEADER */}
       <div className="px-8 py-5 border-b border-slate-50 flex items-center justify-between bg-white">
