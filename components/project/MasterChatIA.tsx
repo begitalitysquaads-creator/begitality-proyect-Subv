@@ -29,6 +29,7 @@ export function MasterChatIA({ projectId }: { projectId: string }) {
   const [focusId, setFocusId] = useState<string>("global");
   const [showFocusSelector, setShowFocusSelector] = useState(false);
   const prevMessagesCount = useRef(-1);
+  const scrollLockRef = useRef(true);
   
   const chatEndRef = useRef<HTMLDivElement>(null);
   const helpRef = useRef<HTMLDivElement>(null);
@@ -62,6 +63,20 @@ export function MasterChatIA({ projectId }: { projectId: string }) {
   }, [projectId]);
 
   useEffect(() => {
+    // Forzar scroll al inicio en la carga inicial
+    window.scrollTo(0, 0);
+    
+    // Desbloquear scroll del chat tras 2 segundos (tiempo de carga de otros componentes)
+    const timer = setTimeout(() => {
+      scrollLockRef.current = false;
+    }, 2000);
+    
+    return () => clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    if (scrollLockRef.current) return;
+
     // Si prevMessagesCount es -1, significa que todavía no hemos cargado el historial inicial.
     // Solo hacemos scroll si ya hay un conteo previo (historial cargado)
     // y el nuevo conteo es mayor.
