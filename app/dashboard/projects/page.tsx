@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo, useCallback } from "react";
 import Link from "next/link";
-import { PlusCircle, FileText, Search, Building2, ChevronRight, User, Zap, Archive, Layers, Calendar, Loader2 } from "lucide-react";
+import { PlusCircle, FileText, Search, Building2, ChevronRight, User, Zap, Archive, Layers, Calendar, Loader2, Clock } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Project } from "@/lib/types";
 import * as Tabs from "@radix-ui/react-tabs";
@@ -14,9 +14,9 @@ export default function ProjectsPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [activeTab, setActiveTab] = useState("active");
-  
+
   // Confirmation state
-  const [confirmArchive, setConfirmArchive] = useState<{open: boolean, id: string, name: string}>({open: false, id: "", name: ""});
+  const [confirmArchive, setConfirmArchive] = useState<{ open: boolean, id: string, name: string }>({ open: false, id: "", name: "" });
   const [archiving, setArchiving] = useState(false);
 
   const supabase = createClient();
@@ -29,8 +29,8 @@ export default function ProjectsPage() {
     const { data } = await supabase
       .from("projects")
       .select(`
-        *, 
-        clients(*),
+        *,
+        clients (*),
         collaborators:project_collaborators (
           profiles!user_id (
             avatar_url,
@@ -39,10 +39,10 @@ export default function ProjectsPage() {
         )
       `)
       .order("updated_at", { ascending: false });
-    
+
     const mappedProjects = (data || []).map(p => ({
       ...p,
-      client: p.clients || null
+      client: Array.isArray(p.clients) ? p.clients[0] : (p.clients || null)
     })) as Project[];
 
     setProjects(mappedProjects);
@@ -70,8 +70,9 @@ export default function ProjectsPage() {
   const stats = useMemo(() => {
     return {
       all: projects.length,
-      active: projects.filter(p => p.status !== 'archived').length,
-      archived: projects.filter(p => p.status === 'archived').length
+      active: projects.filter(p => !['archived', 'finished', 'exported'].includes(p.status)).length,
+      archived: projects.filter(p => p.status === 'archived').length,
+      finished: projects.filter(p => p.status === 'finished' || p.status === 'exported').length
     };
   }, [projects]);
 
@@ -79,14 +80,15 @@ export default function ProjectsPage() {
     const s = search.toLowerCase().trim();
     return projects.filter(p => {
       // 1. Filtrado por Pestaña
-      const matchesTab = 
+      const matchesTab =
         activeTab === 'all' ? true :
-        activeTab === 'active' ? p.status !== 'archived' :
-        p.status === 'archived';
+          activeTab === 'active' ? !['archived', 'finished', 'exported'].includes(p.status) :
+            activeTab === 'archived' ? p.status === 'archived' :
+              p.status === 'finished' || p.status === 'exported';
 
       // 2. Filtrado por Búsqueda
-      const matchesSearch = 
-        p.name.toLowerCase().includes(s) || 
+      const matchesSearch =
+        p.name.toLowerCase().includes(s) ||
         p.grant_name.toLowerCase().includes(s) ||
         (p.client?.name || "").toLowerCase().includes(s);
 
@@ -106,14 +108,14 @@ export default function ProjectsPage() {
           </p>
         </div>
         <div className="flex items-center gap-4 w-full md:w-auto">
-          <div className="relative flex-1 md:w-64">
-            <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <div className="relative flex-1 md:w-64 group">
+            <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-600 transition-colors" />
             <input
               type="text"
               placeholder="Buscar proyecto o cliente..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 rounded-2xl border border-slate-200 bg-white focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 outline-none transition-all text-sm font-medium shadow-sm"
+              className="w-full pl-12 pr-4 py-3 rounded-2xl border border-slate-200 bg-white focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 outline-none transition-all text-sm font-bold shadow-sm h-[46px]"
             />
           </div>
           <Link
@@ -170,6 +172,20 @@ export default function ProjectsPage() {
               activeTab === "archived" ? "bg-amber-600 text-white" : "bg-slate-200 text-slate-500"
             )}>{stats.archived}</span>
           </Tabs.Trigger>
+          <Tabs.Trigger
+            value="finished"
+            className={cn(
+              "flex items-center gap-2.5 px-5 py-2.5 rounded-xl text-xs font-black transition-all group",
+              activeTab === "finished" ? "bg-white text-emerald-600 shadow-sm" : "text-slate-400 hover:text-slate-600"
+            )}
+          >
+            <ShieldCheck size={14} className={cn("transition-colors", activeTab === "finished" ? "text-emerald-600" : "text-slate-300 group-hover:text-slate-400")} />
+            Finalizados
+            <span className={cn(
+              "ml-1 px-2 py-0.5 rounded-md text-[10px] font-bold transition-all",
+              activeTab === "finished" ? "bg-emerald-600 text-white" : "bg-slate-200 text-slate-500"
+            )}>{stats.finished}</span>
+          </Tabs.Trigger>
         </Tabs.List>
 
         <Tabs.Content value={activeTab} className="outline-none">
@@ -212,9 +228,13 @@ export default function ProjectsPage() {
                     <div className="flex items-center gap-4">
                       <div className={cn(
                         "p-3 rounded-xl transition-colors shadow-inner",
-                        p.status === 'archived' ? "bg-slate-100 text-slate-400" : "bg-blue-50 text-blue-600 group-hover:bg-blue-600 group-hover:text-white"
+                        p.status === 'archived' ? "bg-slate-100 text-slate-400" : 
+                        p.status === 'finished' ? "bg-emerald-50 text-emerald-600" :
+                        "bg-blue-50 text-blue-600 group-hover:bg-blue-600 group-hover:text-white"
                       )}>
-                        {p.status === 'archived' ? <Archive size={22} /> : <FileText size={22} />}
+                        {p.status === 'archived' ? <Archive size={22} /> : 
+                         p.status === 'finished' ? <ShieldCheck size={22} /> : 
+                         <FileText size={22} />}
                       </div>
                       <div>
                         <div className="flex flex-wrap items-center gap-2">
@@ -230,25 +250,34 @@ export default function ProjectsPage() {
                         <div className="flex items-center gap-3 mt-1.5">
                           <p className="text-sm text-slate-500 font-medium">{p.grant_name}</p>
                           <div className="w-1 h-1 rounded-full bg-slate-200" />
-                          <div className="flex items-center gap-1.5 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                          <div className="flex items-center gap-1.5 text-[10px] font-black text-slate-500 uppercase tracking-widest">
                             <Calendar size={12} className="text-slate-300" />
-                            {new Date(p.created_at).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}
+                            {new Date(p.created_at).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' })}
                           </div>
-                          
+
+                          {p.project_deadline && (
+                            <>
+                              <div className="w-1 h-1 rounded-full bg-slate-200" />
+                              <div className="flex items-center gap-1.5 text-[10px] font-black text-amber-600 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-100/50 uppercase tracking-widest">
+                                <Clock size={12} />
+                                {new Date(p.project_deadline + "T00:00:00").toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                              </div>
+                            </>
+                          )}
                           {/* TEAM ASSIGNMENT */}
                           <div className="hidden sm:flex items-center gap-3 ml-4 border-l border-slate-100 pl-4">
                             <div className="flex -space-x-2">
                               {p.collaborators && p.collaborators.length > 0 ? (
                                 p.collaborators.slice(0, 3).map((c: any, i: number) => (
-                                  <div 
-                                    key={i} 
+                                  <div
+                                    key={i}
                                     className="w-7 h-7 rounded-lg border-2 border-white bg-slate-100 overflow-hidden shadow-sm flex items-center justify-center text-blue-600"
                                     title={c.profiles?.full_name}
                                   >
                                     {c.profiles?.avatar_url ? (
                                       <img src={c.profiles.avatar_url} className="w-full h-full object-cover" />
                                     ) : (
-                                      <div className="text-[8px] font-black uppercase">{c.profiles?.full_name?.split(" ").map((n:any) => n[0]).join("")}</div>
+                                      <div className="text-[8px] font-black uppercase">{c.profiles?.full_name?.split(" ").map((n: any) => n[0]).join("")}</div>
                                     )}
                                   </div>
                                 ))
@@ -259,8 +288,8 @@ export default function ProjectsPage() {
                               )}
                             </div>
                             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">
-                              {p.collaborators && p.collaborators.length > 0 
-                                ? p.collaborators.length === 1 
+                              {p.collaborators && p.collaborators.length > 0
+                                ? p.collaborators.length === 1
                                   ? (p.collaborators[0].profiles as any)?.full_name
                                   : `Equipo: ${p.collaborators.length}`
                                 : "Sin equipo"}
@@ -271,7 +300,7 @@ export default function ProjectsPage() {
                     </div>
                     <div className="flex items-center gap-3 self-end md:self-auto">
                       {p.status !== 'archived' && (
-                        <button 
+                        <button
                           onClick={(e) => {
                             e.preventDefault();
                             e.stopPropagation();
@@ -284,10 +313,13 @@ export default function ProjectsPage() {
                       )}
                       <span className={cn(
                         "text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest",
-                        p.status === "ready_export" ? "bg-emerald-50 text-emerald-700" : 
-                        p.status === "archived" ? "bg-amber-50 text-amber-700" : "bg-slate-100 text-slate-600"
+                        p.status === "finished" ? "bg-emerald-50 text-emerald-700" :
+                        p.status === "ready_export" ? "bg-emerald-50 text-emerald-700" :
+                          p.status === "archived" ? "bg-amber-50 text-amber-700" : "bg-slate-100 text-slate-600"
                       )}>
-                        {p.status === "ready_export" ? "Listo" : p.status === "archived" ? "Archivado" : "En curso"}
+                        {p.status === "finished" ? "Finalizado" : 
+                         p.status === "ready_export" ? "Listo" : 
+                         p.status === "archived" ? "Archivado" : "En curso"}
                       </span>
                       <div className="p-2 bg-slate-50 rounded-xl text-slate-300 group-hover:bg-blue-50 group-hover:text-blue-600 transition-all shadow-inner">
                         <ChevronRight size={20} />
@@ -301,7 +333,7 @@ export default function ProjectsPage() {
         </Tabs.Content>
       </Tabs.Root>
 
-      <ConfirmDialog 
+      <ConfirmDialog
         open={confirmArchive.open}
         onOpenChange={(open: boolean) => setConfirmArchive({ ...confirmArchive, open })}
         title="Archivar Proyecto"
