@@ -36,9 +36,16 @@ export function ProjectInlineActions({ projectId, projectName, projectStatus }: 
   const handleStatusChange = async (newStatus: string) => {
     setLoading(true);
     try {
+      const updateData: any = { status: newStatus };
+      if (newStatus === 'finished') {
+        updateData.finished_at = new Date().toISOString();
+      } else {
+        updateData.finished_at = null;
+      }
+
       const { error } = await supabase
         .from("projects")
-        .update({ status: newStatus })
+        .update(updateData)
         .eq("id", projectId);
 
       if (error) throw error;

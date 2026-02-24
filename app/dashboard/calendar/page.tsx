@@ -43,6 +43,7 @@ const EVENT_TYPE_CONFIG: Record<string, { label: string; color: string; bg: stri
     project_start: { label: "Inicio", color: "text-emerald-700", bg: "bg-emerald-100", icon: CheckCircle2 },
     project_deadline: { label: "Plazo Máximo", color: "text-red-700", bg: "bg-red-100", icon: Target },
     deliverable: { label: "Entregable", color: "text-blue-700", bg: "bg-blue-100", icon: FileText },
+    project_finished: { label: "Finalizado", color: "text-emerald-700", bg: "bg-emerald-100", icon: ShieldCheck },
     meeting: { label: "Reunión", color: "text-amber-700", bg: "bg-amber-100", icon: Clock },
     review: { label: "Revisión", color: "text-blue-700", bg: "bg-blue-100", icon: Search },
     other: { label: "Otro", color: "text-slate-700", bg: "bg-slate-100", icon: Flag },
@@ -550,7 +551,7 @@ export default function CalendarPage() {
                         </h3>
                         <div className="space-y-4 relative z-10">
                             {Object.entries(EVENT_TYPE_CONFIG)
-                                .filter(([key]) => ['project_start', 'deliverable', 'meeting', 'review', 'other'].includes(key))
+                                .filter(([key]) => ['project_start', 'project_finished', 'deliverable', 'meeting', 'review', 'other'].includes(key))
                                 .map(([key, cfg]) => (
                                 <div key={key} className="flex items-center gap-4 group/item">
                                     <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border border-white/5", cfg.bg, cfg.color)}>

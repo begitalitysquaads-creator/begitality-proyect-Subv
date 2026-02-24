@@ -101,6 +101,21 @@ export async function GET(request: Request) {
             });
         }
 
+        // 4. Evento: Finalización Real (Si existe)
+        const finishedDate = norm(p.finished_at);
+        if (finishedDate) {
+            events.push({
+                id: `finished-${p.id}`,
+                projectId: p.id,
+                title: `FINALIZADO: ${p.name}`,
+                date: finishedDate,
+                type: 'project_finished',
+                status: p.status,
+                client: clientName,
+                collaborators
+            });
+        }
+
         return events;
     });
 
