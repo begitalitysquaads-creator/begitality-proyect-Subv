@@ -166,20 +166,31 @@ export function ExportView({ project }: ExportViewProps) {
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       
-      // Abrir en nueva pestaña con instrucción de impresión (#print)
-      // La mayoría de navegadores modernos abren el diálogo de impresión automáticamente si el PDF se carga así
-      const printUrl = `${url}#print`;
-      const printWindow = window.open(printUrl, '_blank');
+      // Crear un iframe invisible para imprimir en la misma ventana
+      const iframe = document.createElement('iframe');
+      iframe.style.position = 'fixed';
+      iframe.style.right = '0';
+      iframe.style.bottom = '0';
+      iframe.style.width = '0';
+      iframe.style.height = '0';
+      iframe.style.border = 'none';
+      iframe.src = url;
+      document.body.appendChild(iframe);
       
-      if (printWindow) {
-        printWindow.focus();
-        await logClientAction(project.id, "Documentación", "activó la impresión de la memoria técnica");
-      } else {
-        throw new Error("El navegador bloqueó la apertura de la ventana de impresión. Por favor, permite los elementos emergentes para Begitality.");
-      }
-      
-      // Limpieza del objeto URL después de un tiempo prudencial
-      setTimeout(() => URL.revokeObjectURL(url), 60000);
+      iframe.onload = () => {
+        setTimeout(() => {
+          iframe.contentWindow?.focus();
+          iframe.contentWindow?.print();
+          
+          // Limpieza
+          setTimeout(() => {
+            document.body.removeChild(iframe);
+            URL.revokeObjectURL(url);
+          }, 2000);
+        }, 500);
+      };
+
+      await logClientAction(project.id, "Documentación", "activó la impresión de la memoria técnica");
       
     } catch (e) {
       console.error(e);
@@ -316,10 +327,10 @@ export function ExportView({ project }: ExportViewProps) {
         </div>
       </header>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2 space-y-6">
-          <div className="bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden flex flex-col h-[70vh]">
-            <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-stretch">
+        <div className="lg:col-span-2 flex flex-col h-full">
+          <div className="bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden flex flex-col flex-1 h-full min-h-[70vh]">
+            <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50 shrink-0">
               <div className="flex items-center gap-2">
                 <FileText size={18} className="text-slate-400" />
                 <span className="text-sm font-bold text-slate-700">
@@ -377,8 +388,8 @@ export function ExportView({ project }: ExportViewProps) {
           </div>
         </div>
 
-        <div className="space-y-6">
-          <div className="bg-slate-900 rounded-3xl p-8 text-white relative overflow-hidden">
+        <div className="lg:col-span-1 flex flex-col gap-6 h-full">
+          <div className="bg-slate-900 rounded-3xl p-8 text-white relative overflow-hidden flex-1 flex flex-col justify-center">
             <div className="absolute top-0 right-0 p-4 opacity-10">
               <Sparkles size={120} />
             </div>
