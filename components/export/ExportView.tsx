@@ -161,38 +161,50 @@ export function ExportView({ project }: ExportViewProps) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ projectId: project.id, format: "pdf" }),
       });
+      
       if (!res.ok) throw new Error("Error al generar PDF para impresión");
       
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       
-      // Crear un iframe invisible para imprimir en la misma ventana
-      const iframe = document.createElement('iframe');
-      iframe.style.position = 'fixed';
-      iframe.style.right = '0';
-      iframe.style.bottom = '0';
-      iframe.style.width = '0';
-      iframe.style.height = '0';
-      iframe.style.border = 'none';
-      iframe.src = url;
-      document.body.appendChild(iframe);
+      // Creamos un iframe con un ID único para evitar colisiones
+      const frameId = `print-frame-${Date.now()}`;
+      let iframe = document.getElementById(frameId) as HTMLIFrameElement;
       
+      if (!iframe) {
+        iframe = document.createElement('iframe');
+        iframe.id = frameId;
+        iframe.style.position = 'absolute';
+        iframe.style.top = '-9999px';
+        iframe.style.left = '-9999px';
+        iframe.style.width = '0';
+        iframe.style.height = '0';
+        document.body.appendChild(iframe);
+      }
+
+      iframe.src = url;
+
+      // Esperar a que el contenido esté totalmente cargado
       iframe.onload = () => {
-        setTimeout(() => {
-          if (!iframe.contentWindow) return;
-          
-          iframe.contentWindow.focus();
-          iframe.contentWindow.print();
-          
-          // Limpieza extendida: 
-          // Aumentamos a 10 segundos para dar tiempo al navegador a gestionar el spool de impresión
+        try {
           setTimeout(() => {
-            if (document.body.contains(iframe)) {
-              document.body.removeChild(iframe);
-            }
-            URL.revokeObjectURL(url);
-          }, 10000);
-        }, 1000);
+            if (!iframe.contentWindow) return;
+            
+            iframe.contentWindow.focus();
+            iframe.contentWindow.print();
+            
+            // Limpieza diferida para no interrumpir el spool
+            setTimeout(() => {
+              if (document.body.contains(iframe)) {
+                document.body.removeChild(iframe);
+              }
+              URL.revokeObjectURL(url);
+            }, 5000);
+          }, 1000);
+        } catch (e) {
+          console.error("Print error inside iframe:", e);
+          window.open(url, '_blank'); // Fallback si falla el iframe
+        }
       };
 
       await logClientAction(project.id, "Documentación", "activó la impresión de la memoria técnica");
