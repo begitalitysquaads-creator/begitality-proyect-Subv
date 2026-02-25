@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { History, Loader2, User, FileText, CheckCircle2, AlertTriangle, Database, Bot, FileUp, Target, Users, Briefcase, Shield } from "lucide-react";
+import { History, Loader2, User, FileText, CheckCircle2, AlertTriangle, Database, Bot, FileUp, Target, Users, Briefcase, Shield, Search, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
@@ -25,6 +25,7 @@ interface AuditLog {
 
 export function AuditLogViewer({ projectId, isGlobal = false }: { projectId?: string, isGlobal?: boolean }) {
   const [logs, setLogs] = useState<AuditLog[]>([]);
+  const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
   const supabase = createClient();
 
@@ -109,6 +110,21 @@ export function AuditLogViewer({ projectId, isGlobal = false }: { projectId?: st
 
   if (loading) return <div className="py-10 text-center"><Loader2 className="animate-spin mx-auto text-slate-300" /></div>;
 
+  const filteredLogs = logs.filter(log => {
+    const searchLower = searchTerm.toLowerCase();
+    const userName = log.user?.full_name?.toLowerCase() || "";
+    const userEmail = log.user?.email?.toLowerCase() || "";
+    const projectName = log.projects?.name?.toLowerCase() || "";
+    const action = log.action.toLowerCase();
+    const description = (typeof log.details === 'string' ? log.details : log.details?.description || "").toLowerCase();
+
+    return userName.includes(searchLower) || 
+           userEmail.includes(searchLower) || 
+           projectName.includes(searchLower) || 
+           action.includes(searchLower) || 
+           description.includes(searchLower);
+  });
+
   return (
     <div className="bg-white border border-slate-200 rounded-[2.5rem] p-8 shadow-sm relative group animate-in fade-in duration-700 overflow-hidden">
       
@@ -119,23 +135,49 @@ export function AuditLogViewer({ projectId, isGlobal = false }: { projectId?: st
         </div>
       </div>
 
-      <div className="flex items-center justify-between mb-8 relative z-10">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 relative z-10 gap-4">
         <h3 className="font-black text-slate-900 flex items-center gap-2.5 text-[10px] uppercase tracking-[0.25em]">
           <div className="w-2 h-2 bg-blue-600 rounded-full shadow-[0_0_10px_rgba(37,99,235,0.5)]" />
           Historial de Actividad
         </h3>
-        <div className="p-2 bg-slate-50 text-slate-400 rounded-xl">
-          <History size={18} />
+        
+        <div className="flex items-center gap-3">
+          <div className="relative group/search">
+            <Search size={14} className={cn(
+              "absolute left-3 top-1/2 -translate-y-1/2 transition-colors",
+              searchTerm ? "text-blue-500" : "text-slate-300 group-focus-within/search:text-blue-400"
+            )} />
+            <input 
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Buscar acción, usuario..."
+              className="pl-9 pr-8 py-2 bg-slate-50 border border-slate-100 rounded-xl text-[10px] font-bold outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-200 transition-all w-full sm:w-48 placeholder:text-slate-300"
+            />
+            {searchTerm && (
+              <button 
+                onClick={() => setSearchTerm("")}
+                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-slate-300 hover:text-slate-600 transition-colors"
+              >
+                <X size={12} />
+              </button>
+            )}
+          </div>
+          <div className="p-2 bg-slate-50 text-slate-400 rounded-xl">
+            <History size={18} />
+          </div>
         </div>
       </div>
 
       <div className="space-y-4 max-h-[450px] overflow-y-auto pr-2 scrollbar-premium relative z-10">
-        {logs.length === 0 ? (
+        {filteredLogs.length === 0 ? (
           <div className="py-12 text-center border-2 border-dashed border-slate-100 rounded-[2rem] opacity-40">
-            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-relaxed">Sin actividad registrada</p>
+            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-relaxed">
+              {searchTerm ? "No se encontraron coincidencias" : "Sin actividad registrada"}
+            </p>
           </div>
         ) : (
-          logs.map((log) => (
+          filteredLogs.map((log) => (
             <div key={log.id} className="flex gap-4 p-4 rounded-[1.5rem] bg-slate-50/50 border border-slate-100 hover:bg-white hover:border-blue-100 hover:shadow-lg transition-all group/item duration-300">
               <div className="mt-1 shrink-0">
                 {log.user?.avatar_url ? (
