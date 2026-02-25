@@ -223,19 +223,19 @@ export default function CalendarPage() {
     return (
         <div className="max-w-5xl mx-auto space-y-10 animate-in fade-in duration-500 pb-20">
             {/* Header Section */}
-            <header className="flex flex-col md:flex-row md:items-end justify-between gap-8">
-                <div className="flex-1 min-w-0">
+            <div className="space-y-8">
+                <div className="space-y-1">
                     <h1 className="text-5xl font-black text-slate-900 tracking-tighter">
                         Calendario
                     </h1>
-                    <p className="text-slate-500 font-medium mt-2 text-lg">
-                        Gestión cronológica de expedientes y entregas
+                    <p className="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em]">
+                        Gestión Cronológica de Expedientes
                     </p>
                 </div>
 
                 {/* Main Controls Row */}
-                <div className="flex flex-wrap items-center gap-4 w-full md:w-auto">
-                    <div className="bg-slate-100/80 p-1.5 rounded-2xl flex gap-1 border border-slate-200/50 backdrop-blur-sm shadow-sm h-[46px] items-center w-full sm:w-auto min-w-[190px]">
+                <div className="flex flex-wrap items-center gap-4 w-full">
+                    <div className="bg-slate-100/80 p-1.5 rounded-2xl flex gap-1 border border-slate-200/50 backdrop-blur-sm shadow-inner h-[46px] items-center w-full sm:w-auto min-w-[190px]">
                         <button
                             onClick={() => setViewMode("month")}
                             className={cn(
@@ -256,24 +256,23 @@ export default function CalendarPage() {
                         </button>
                     </div>
 
+                    <div className="relative group flex-1 min-w-[280px]">
+                        <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-blue-500 transition-colors" />
+                        <input
+                            type="text"
+                            placeholder="Buscar en el cronograma..."
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                            className="w-full pl-12 pr-4 py-3 rounded-2xl border border-slate-200 bg-white focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 outline-none transition-all text-sm font-bold shadow-sm h-[46px]"
+                        />
+                    </div>
+
                     <div className="flex items-center gap-2">
-                        <button onClick={prevMonth} className="p-3 hover:bg-white rounded-xl border border-slate-200 shadow-sm transition-all active:scale-90 hover:text-blue-600 hover:border-blue-200"><ChevronLeft size={20} /></button>
+                        <button onClick={prevMonth} className="p-3 hover:bg-white rounded-xl border border-slate-200 shadow-sm transition-all active:scale-90"><ChevronLeft size={20} /></button>
                         <button onClick={goToday} className="px-6 py-3 bg-white border border-slate-200 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-sm hover:border-blue-500 hover:text-blue-600 transition-all active:scale-95">Hoy</button>
-                        <button onClick={nextMonth} className="p-3 hover:bg-white rounded-xl border border-slate-200 shadow-sm transition-all active:scale-90 hover:text-blue-600 hover:border-blue-200"><ChevronRight size={20} /></button>
+                        <button onClick={nextMonth} className="p-3 hover:bg-white rounded-xl border border-slate-200 shadow-sm transition-all active:scale-90"><ChevronRight size={20} /></button>
                     </div>
                 </div>
-            </header>
-
-            {/* Búsqueda Destacada */}
-            <div className="relative group max-w-2xl">
-                <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-600 transition-colors" />
-                <input
-                    type="text"
-                    placeholder="Filtrar por proyecto, cliente o trabajador..."
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    className="w-full pl-12 pr-4 py-4 rounded-2xl border border-slate-200 bg-white focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 outline-none transition-all text-sm font-bold shadow-sm"
-                />
             </div>
 
             {/* Main Layout Grid */}
