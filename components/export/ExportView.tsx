@@ -329,13 +329,26 @@ export function ExportView({ project }: ExportViewProps) {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-stretch">
         <div className="lg:col-span-2 flex flex-col h-full">
-          <div className="bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden flex flex-col flex-1 h-full min-h-[70vh]">
-            <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50 shrink-0">
-              <div className="flex items-center gap-2">
-                <FileText size={18} className="text-slate-400" />
-                <span className="text-sm font-bold text-slate-700">
-                  VISTA PREVIA DE MEMORIA
-                </span>
+          {/* VISTA PREVIA */}
+          <div className="bg-white border border-slate-200 rounded-[3rem] p-10 shadow-sm flex-1 flex flex-col relative group overflow-hidden min-h-[70vh]">
+            <div className="absolute inset-0 rounded-[3rem] overflow-hidden pointer-events-none">
+              <div className="absolute -right-10 -bottom-10 opacity-[0.02] group-hover:scale-110 transition-transform duration-1000">
+                <FileText size={400} />
+              </div>
+            </div>
+
+            <header className="flex justify-between items-center mb-10 relative z-10">
+              <div className="flex items-center gap-5">
+                <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center shadow-inner">
+                  <Eye size={24} />
+                </div>
+                <div>
+                  <h3 className="text-xl font-black text-slate-900 tracking-tighter leading-none uppercase">Vista Previa</h3>
+                  <p className="text-[9px] font-black text-blue-600 uppercase tracking-[0.3em] mt-1.5 flex items-center gap-2">
+                    <Sparkles size={10} className="animate-pulse" />
+                    Memoria Técnica Generada
+                  </p>
+                </div>
               </div>
               <div className="flex gap-2">
                 <StyledTooltip content="Imprimir documento">
@@ -349,8 +362,9 @@ export function ExportView({ project }: ExportViewProps) {
                   </button>
                 </StyledTooltip>
               </div>
-            </div>
-            <div className="flex-1 overflow-y-auto p-12 bg-slate-50/30">
+            </header>
+
+            <div className="flex-1 overflow-y-auto p-12 bg-slate-50/30 rounded-[2rem] border border-slate-100 relative z-10 scrollbar-premium">
               <div className="max-w-2xl mx-auto bg-white shadow-2xl shadow-slate-200/50 p-16 min-h-full space-y-8 font-serif">
                 <div className="text-center space-y-2 mb-12">
                   <h1 className="text-3xl font-bold text-slate-900 uppercase tracking-tighter">
