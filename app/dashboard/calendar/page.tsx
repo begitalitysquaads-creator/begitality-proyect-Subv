@@ -178,24 +178,26 @@ export default function CalendarPage() {
     }).length;
 
     function prevMonth() {
+        let newDate;
         if (viewMode === "month") {
-            setCurrentDate(new Date(year, month - 1, 1));
+            newDate = new Date(year, month - 1, 1);
         } else {
-            const d = new Date(currentDate);
-            d.setDate(d.getDate() - 7);
-            setCurrentDate(d);
+            newDate = new Date(currentDate);
+            newDate.setDate(newDate.getDate() - 7);
         }
-        setSelectedDate(null);
+        setCurrentDate(newDate);
+        setSelectedDate(newDate);
     }
     function nextMonth() {
+        let newDate;
         if (viewMode === "month") {
-            setCurrentDate(new Date(year, month + 1, 1));
+            newDate = new Date(year, month + 1, 1);
         } else {
-            const d = new Date(currentDate);
-            d.setDate(d.getDate() + 7);
-            setCurrentDate(d);
+            newDate = new Date(currentDate);
+            newDate.setDate(newDate.getDate() + 7);
         }
-        setSelectedDate(null);
+        setCurrentDate(newDate);
+        setSelectedDate(newDate);
     }
     function goToday() {
         const d = new Date();
