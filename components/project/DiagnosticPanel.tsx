@@ -21,6 +21,7 @@ import {
 import { cn } from "@/lib/utils";
 import type { ProjectDiagnostic, DiagnosticRisk, DiagnosticSuggestion } from "@/lib/types";
 import { AutoImproveModal } from "@/components/project/AutoImproveModal";
+import { logClientAction } from "@/lib/audit-client";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -202,6 +203,7 @@ export function DiagnosticPanel({
             });
             const data = await res.json();
             if (res.ok && data.diagnostic) {
+                await logClientAction(projectId, "IA: Diagnóstico", `ejecutó un nuevo análisis de calidad (Puntuación: ${data.diagnostic.overall_score}/100)`);
                 setDiagnostic(data.diagnostic);
             } else {
                 setError(data.error || "Error al generar el diagnóstico");

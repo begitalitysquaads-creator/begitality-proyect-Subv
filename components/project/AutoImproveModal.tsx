@@ -18,6 +18,7 @@ import {
     Check,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { logClientAction } from "@/lib/audit-client";
 
 type SectionStatus = "pending" | "improving" | "done" | "error";
 
@@ -146,6 +147,7 @@ export function AutoImproveModal({ projectId, isOpen, onClose, onComplete }: Aut
                         } else if (event.type === "rediagnosing") {
                             setPhase("rediagnosing");
                         } else if (event.type === "complete") {
+                            await logClientAction(projectId, "IA: Mejora", `completó la mejora automática de ${event.improved} secciones (Nueva puntuación: ${event.newScore || '—'}/100)`);
                             setResult({
                                 improved: event.improved,
                                 errors: event.errors,

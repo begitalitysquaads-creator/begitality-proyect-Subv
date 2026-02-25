@@ -93,6 +93,7 @@ export function CargarBasesConvocatoria({
       const res = await fetch(`/api/projects/${projectId}/generate-summary`, { method: "POST" });
       if (!res.ok) throw new Error("Error generando resumen");
       const data = await res.json();
+      await logClientAction(projectId, "IA: Proyecto", "generó la ficha técnica automática del expediente");
       setSummary(data);
       setEditingData(data);
       router.refresh();

@@ -13,6 +13,7 @@ import { Budget } from "@/lib/types";
 import * as TooltipPrimitive from "@radix-ui/react-tooltip";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { StyledTooltip } from "@/components/ui/Tooltip";
+import { logClientAction } from "@/lib/audit-client";
 
 export function BudgetManager({ projectId }: { projectId: string }) {
   const [budgets, setBudgets] = useState<Budget[]>([]);
@@ -74,6 +75,7 @@ export function BudgetManager({ projectId }: { projectId: string }) {
         })
       });
       if (res.ok) {
+        await logClientAction(projectId, "Presupuesto", `añadió la partida "${newConcept}" por un importe de ${new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(parseFloat(newAmount))}`);
         setNewConcept("");
         setNewAmount("");
         setShowForm(false);
@@ -91,6 +93,7 @@ export function BudgetManager({ projectId }: { projectId: string }) {
     try {
       const res = await fetch(`/api/projects/${projectId}/budget?id=${confirmDelete.id}`, { method: "DELETE" });
       if (res.ok) {
+        await logClientAction(projectId, "Presupuesto", `eliminó la partida presupuestaria "${confirmDelete.name}"`);
         setConfirmDelete({ open: false, id: "", name: "" });
         fetchBudgets();
       }
