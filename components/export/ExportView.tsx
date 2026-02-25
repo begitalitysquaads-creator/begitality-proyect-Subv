@@ -166,24 +166,20 @@ export function ExportView({ project }: ExportViewProps) {
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       
-      // Crear un iframe invisible para imprimir sin abrir nueva pestaña
-      const iframe = document.createElement('iframe');
-      iframe.style.display = 'none';
-      iframe.src = url;
-      document.body.appendChild(iframe);
+      // Abrir en nueva pestaña con instrucción de impresión (#print)
+      // La mayoría de navegadores modernos abren el diálogo de impresión automáticamente si el PDF se carga así
+      const printUrl = `${url}#print`;
+      const printWindow = window.open(printUrl, '_blank');
       
-      iframe.onload = () => {
-        iframe.contentWindow?.focus();
-        iframe.contentWindow?.print();
-        
-        // Limpieza tras un breve retraso para asegurar que el diálogo se abra
-        setTimeout(() => {
-          document.body.removeChild(iframe);
-          URL.revokeObjectURL(url);
-        }, 1000);
-      };
-
-      await logClientAction(project.id, "Documentación", "activó la impresión de la memoria técnica");
+      if (printWindow) {
+        printWindow.focus();
+        await logClientAction(project.id, "Documentación", "activó la impresión de la memoria técnica");
+      } else {
+        throw new Error("El navegador bloqueó la apertura de la ventana de impresión. Por favor, permite los elementos emergentes para Begitality.");
+      }
+      
+      // Limpieza del objeto URL después de un tiempo prudencial
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
       
     } catch (e) {
       console.error(e);
@@ -303,7 +299,7 @@ export function ExportView({ project }: ExportViewProps) {
         </div>
         
         <div className="flex items-center gap-6">
-          <div className="hidden md:block text-right">
+          <div className="text-right">
             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Estado de Consolidación</p>
             <div className="flex items-center gap-3">
               <div className="w-32 h-1.5 bg-slate-100 rounded-full overflow-hidden">
@@ -315,14 +311,6 @@ export function ExportView({ project }: ExportViewProps) {
                 />
               </div>
               <span className="text-xs font-black text-slate-900">{progressPercent}%</span>
-            </div>
-          </div>
-
-          <div className={cn("flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold border transition-all shadow-sm", maturity.color)}>
-            <StatusIcon size={16} className={maturity.label === "En Redacción" ? "animate-spin" : ""} />
-            <div className="flex flex-col">
-              <span className="leading-none uppercase tracking-wider text-[9px] mb-0.5">{maturity.label}</span>
-              <span className="leading-none opacity-60 text-[8px] font-medium">{maturity.sub}</span>
             </div>
           </div>
         </div>
@@ -405,7 +393,7 @@ export function ExportView({ project }: ExportViewProps) {
             <p className="text-slate-400 text-sm mb-6 font-medium">
               {progressPercent === 100 
                 ? "El expediente cumple con todos los estándares técnicos para su presentación oficial."
-                : `Nivel de madurez actual: ${progressPercent}%. Faltan ${totalSections - completedSections} secciones por validar.`}
+                : `Faltan ${totalSections - completedSections} secciones por validar.`}
             </p>
             <div className="space-y-4 mb-8">
               <div className="flex items-center gap-3 text-sm">

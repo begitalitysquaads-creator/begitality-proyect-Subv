@@ -193,7 +193,6 @@ export async function generateReviewReport(data: ReviewData): Promise<ArrayBuffe
   // Footer en la última página
   addFooter(doc, "INFORME TÉCNICO DE CALIDAD");
 
-  doc.autoPrint();
   return doc.output("arraybuffer");
 }
 
@@ -225,7 +224,6 @@ export async function generatePdf(data: any): Promise<ArrayBuffer> {
     cursorY += 15;
   });
 
-  doc.autoPrint();
   return doc.output("arraybuffer");
 }
 
