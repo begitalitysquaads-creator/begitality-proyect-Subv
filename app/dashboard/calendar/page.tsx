@@ -275,74 +275,8 @@ export default function CalendarPage() {
 
             {/* Main Layout Grid */}
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-10">
-                {/* Sidebar Stats & Legend */}
-                <div className="lg:col-span-1 space-y-10">
-                    <div className="bg-slate-900 rounded-[2.5rem] p-10 text-white shadow-2xl shadow-slate-900/20 relative overflow-hidden group">
-                        <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:scale-110 transition-transform duration-1000">
-                            <CalendarDays size={120} />
-                        </div>
-                        <h2 className="text-3xl font-black tracking-tighter mb-1 relative z-10">{MONTHS_ES[month]}</h2>
-                        <p className="text-blue-400 font-black text-[10px] uppercase tracking-[0.3em] mb-10 relative z-10">{year}</p>
-
-                        <div className="space-y-8 relative z-10">
-                            <div className="flex items-center gap-5">
-                                <div className="w-12 h-12 bg-red-500/20 rounded-2xl flex items-center justify-center border border-red-500/20 shadow-inner">
-                                    <AlertTriangle size={20} className="text-red-400" />
-                                </div>
-                                <div>
-                                    <p className="text-2xl font-black tracking-tighter">{overdue}</p>
-                                    <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Vencidos</p>
-                                </div>
-                            </div>
-                            <div className="flex items-center gap-5">
-                                <div className="w-12 h-12 bg-blue-500/20 rounded-2xl flex items-center justify-center border border-blue-500/20 shadow-inner">
-                                    <Clock size={20} className="text-blue-400" />
-                                </div>
-                                <div>
-                                    <p className="text-2xl font-black tracking-tighter">{thisWeek}</p>
-                                    <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Esta Semana</p>
-                                </div>
-                            </div>
-                            <div className="flex items-center gap-5">
-                                <div className="w-12 h-12 bg-emerald-500/20 rounded-2xl flex items-center justify-center border border-emerald-500/20 shadow-inner">
-                                    <CheckCircle2 size={20} className="text-emerald-400" />
-                                </div>
-                                <div>
-                                    <p className="text-2xl font-black tracking-tighter">{thisMonth}</p>
-                                    <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Total Mes</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="bg-white border border-slate-200 rounded-[2.5rem] p-10 shadow-sm relative overflow-hidden group">
-                        <div className="absolute top-0 right-0 p-6 opacity-[0.03] group-hover:scale-110 transition-transform duration-1000 text-slate-900">
-                            <Flag size={120} />
-                        </div>
-                        <h3 className="font-black text-[10px] uppercase tracking-[0.3em] mb-8 flex items-center gap-3 relative z-10">
-                            <div className="w-2 h-2 bg-blue-500 rounded-full shadow-[0_0_10px_rgba(59,130,246,0.8)] animate-pulse" />
-                            Leyenda Técnica
-                        </h3>
-                        <div className="space-y-4 relative z-10">
-                            {Object.entries(EVENT_TYPE_CONFIG)
-                                .filter(([key]) => ['project_start', 'project_finished', 'deliverable', 'meeting', 'review', 'other'].includes(key))
-                                .map(([key, cfg]) => (
-                                <div key={key} className="flex items-center gap-4 group/item">
-                                    <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border border-white/5", cfg.bg, cfg.color)}>
-                                        <cfg.icon size={18} />
-                                    </div>
-                                    <div>
-                                        <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest">{cfg.label}</p>
-                                        <p className="text-[8px] font-bold text-slate-400 uppercase tracking-tight opacity-0 group-hover/item:opacity-100 transition-opacity">Hito de control</p>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                </div>
-
-                {/* Calendar Viewport */}
-                <div className="lg:col-span-3 space-y-10">
+                {/* Calendar Viewport (Left) */}
+                <div className="lg:col-span-3 space-y-10 order-2 lg:order-1">
                     <div className="bg-white border border-slate-200 rounded-[3rem] shadow-sm overflow-hidden flex flex-col">
                         {/* Days Header */}
                         <div className="grid grid-cols-7 border-b border-slate-100 bg-slate-50/50">
@@ -531,6 +465,72 @@ export default function CalendarPage() {
                             </div>
                         </div>
                     )}
+                </div>
+
+                {/* Sidebar Stats & Legend (Right) */}
+                <div className="lg:col-span-1 space-y-10 order-1 lg:order-2">
+                    <div className="bg-slate-900 rounded-[2.5rem] p-10 text-white shadow-2xl shadow-slate-900/20 relative overflow-hidden group">
+                        <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:scale-110 transition-transform duration-1000">
+                            <CalendarDays size={120} />
+                        </div>
+                        <h2 className="text-3xl font-black tracking-tighter mb-1 relative z-10">{MONTHS_ES[month]}</h2>
+                        <p className="text-blue-400 font-black text-[10px] uppercase tracking-[0.3em] mb-10 relative z-10">{year}</p>
+
+                        <div className="space-y-8 relative z-10">
+                            <div className="flex items-center gap-5">
+                                <div className="w-12 h-12 bg-red-500/20 rounded-2xl flex items-center justify-center border border-red-500/20 shadow-inner">
+                                    <AlertTriangle size={20} className="text-red-400" />
+                                </div>
+                                <div>
+                                    <p className="text-2xl font-black tracking-tighter">{overdue}</p>
+                                    <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Vencidos</p>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-5">
+                                <div className="w-12 h-12 bg-blue-500/20 rounded-2xl flex items-center justify-center border border-blue-500/20 shadow-inner">
+                                    <Clock size={20} className="text-blue-400" />
+                                </div>
+                                <div>
+                                    <p className="text-2xl font-black tracking-tighter">{thisWeek}</p>
+                                    <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Esta Semana</p>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-5">
+                                <div className="w-12 h-12 bg-emerald-500/20 rounded-2xl flex items-center justify-center border border-emerald-500/20 shadow-inner">
+                                    <CheckCircle2 size={20} className="text-emerald-400" />
+                                </div>
+                                <div>
+                                    <p className="text-2xl font-black tracking-tighter">{thisMonth}</p>
+                                    <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Total Mes</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="bg-white border border-slate-200 rounded-[2.5rem] p-10 shadow-sm relative overflow-hidden group">
+                        <div className="absolute top-0 right-0 p-6 opacity-[0.03] group-hover:scale-110 transition-transform duration-1000 text-slate-900">
+                            <Flag size={120} />
+                        </div>
+                        <h3 className="font-black text-[10px] uppercase tracking-[0.3em] mb-8 flex items-center gap-3 relative z-10">
+                            <div className="w-2 h-2 bg-blue-500 rounded-full shadow-[0_0_10px_rgba(59,130,246,0.8)] animate-pulse" />
+                            Leyenda Técnica
+                        </h3>
+                        <div className="space-y-4 relative z-10">
+                            {Object.entries(EVENT_TYPE_CONFIG)
+                                .filter(([key]) => ['project_start', 'project_finished', 'deliverable', 'meeting', 'review', 'other'].includes(key))
+                                .map(([key, cfg]) => (
+                                <div key={key} className="flex items-center gap-4 group/item">
+                                    <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border border-white/5", cfg.bg, cfg.color)}>
+                                        <cfg.icon size={18} />
+                                    </div>
+                                    <div>
+                                        <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest">{cfg.label}</p>
+                                        <p className="text-[8px] font-bold text-slate-400 uppercase tracking-tight opacity-0 group-hover/item:opacity-100 transition-opacity">Hito de control</p>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
