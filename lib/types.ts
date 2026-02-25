@@ -1,6 +1,6 @@
 // Begitality - Tipos compartidos (alineados con esquema Supabase)
 
-export type ProjectStatus = "draft" | "in_progress" | "ready_export" | "exported" | "archived";
+export type ProjectStatus = "draft" | "in_progress" | "ready_export" | "exported" | "finished" | "archived";
 export type UserRole = "admin" | "senior_consultant" | "junior_consultant" | "auditor" | "viewer";
 
 export interface Profile {

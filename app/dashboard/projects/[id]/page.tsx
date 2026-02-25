@@ -15,9 +15,7 @@ import { SmartRoadmap } from "@/components/project/SmartRoadmap";
 import { IAContextPanel } from "@/components/project/IAContextPanel";
 import { HelpGuide } from "@/components/project/HelpGuide";
 import { CollaboratorManager } from "@/components/project/CollaboratorManager";
-import { ProjectHeaderActions } from "@/components/project/ProjectHeaderActions";
 import { ProjectInlineActions } from "@/components/project/ProjectInlineActions";
-import { ProjectDeadlinePicker } from "@/components/project/ProjectDeadlinePicker";
 import { MilestoneManager } from "@/components/project/MilestoneManager";
 import { ProjectTouch } from "@/components/project/ProjectTouch";
 import { BackButton } from "@/components/ui/BackButton";
@@ -47,7 +45,6 @@ export default async function ProjectWorkspacePage({
   if (!project) notFound();
 
   // Actualizar último acceso (Background update)
-  // No necesitamos esperar a que termine para mostrar la página
   supabase
     .from("projects")
     .update({ last_accessed_at: new Date().toISOString() })
@@ -115,7 +112,6 @@ export default async function ProjectWorkspacePage({
     docsIndexed
   };
 
-  // Supabase join with table 'clients' might return an object or an array of one element
   const client = Array.isArray(project.clients) ? project.clients[0] : project.clients;
 
   return (
@@ -192,23 +188,17 @@ export default async function ProjectWorkspacePage({
         </div>
       </header>
 
-      {/* Project Health Dashboard */}
       <ProjectHealth stats={stats} />
 
-      {/* Grid Principal con Sticky Sidebar */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start relative">
-        {/* Columna Izquierda: Workspace */}
         <div className="lg:col-span-2 space-y-6 min-w-0">
           <CargarBasesConvocatoria
             projectId={id}
             files={convocatoriaFiles ?? []}
             initialSummary={project.grant_summary}
           />
-
           <SmartRoadmap projectId={id} />
-
           <BudgetManager projectId={id} />
-
           <SeccionesMemoria
             projectId={id}
             sections={sections ?? []}
@@ -216,10 +206,8 @@ export default async function ProjectWorkspacePage({
           />
         </div>
 
-        {/* Columna Derecha: Inteligencia y Gestión (Fija) */}
         <div className="lg:col-span-1">
           <div className="space-y-6 lg:sticky lg:top-8">
-            {/* Tarjeta de Gestión de Cliente Premium */}
             <div className="bg-white border border-slate-200 rounded-[2.5rem] p-8 shadow-sm relative group">
               <div className="absolute inset-0 rounded-[2.5rem] overflow-hidden pointer-events-none">
                 <div className="absolute -right-8 -bottom-8 opacity-[0.02] group-hover:scale-110 transition-transform duration-1000">
@@ -258,7 +246,6 @@ export default async function ProjectWorkspacePage({
                     </div>
                   </div>
 
-                  {/* Persona de Contacto */}
                   {(client.contact_name || client.contact_position) && (
                     <div className="px-2 space-y-1">
                       <p className="text-[8px] font-black text-slate-300 uppercase tracking-[0.2em] mb-2">Responsable del Proyecto</p>
@@ -306,31 +293,18 @@ export default async function ProjectWorkspacePage({
               </div>
             </div>
 
-            {/* Hoja de Ruta del Proyecto */}
             <MilestoneManager projectId={id} />
-
-            {/* Equipo de Trabajo */}
             <CollaboratorManager projectId={id} />
-
-            {/* Contexto de Redacción IA */}
             <IAContextPanel
               projectId={id}
               initialInstructions={project.writing_instructions}
             />
-
-            {/* Diagnóstico IA */}
             <DiagnosticPanel
               projectId={id}
               initialDiagnostic={latestDiagnostic as ProjectDiagnostic | null}
               hasSections={(sections?.length ?? 0) > 0}
             />
-
-            {/* MASTER CHAT IA */}
-            <MasterChatIA
-              projectId={id}
-            />
-
-            {/* HISTORIAL DE ACTIVIDAD */}
+            <MasterChatIA projectId={id} />
             <AuditLogViewer projectId={id} />
           </div>
         </div>

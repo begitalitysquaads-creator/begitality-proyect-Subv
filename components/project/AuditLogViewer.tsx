@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { History, Loader2, User, FileText, CheckCircle2, AlertTriangle, Database, Bot, FileUp, Target, Users, Briefcase } from "lucide-react";
+import { History, Loader2, User, FileText, CheckCircle2, AlertTriangle, Database, Bot, FileUp, Target, Users, Briefcase, Shield } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
@@ -18,6 +18,9 @@ interface AuditLog {
     full_name: string;
     avatar_url: string | null;
   };
+  projects?: {
+    name: string;
+  } | null;
 }
 
 export function AuditLogViewer({ projectId, isGlobal = false }: { projectId?: string, isGlobal?: boolean }) {
@@ -39,6 +42,9 @@ export function AuditLogViewer({ projectId, isGlobal = false }: { projectId?: st
               email,
               full_name,
               avatar_url
+            ),
+            projects (
+              name
             )
           `)
           .order("created_at", { ascending: false })
@@ -78,7 +84,7 @@ export function AuditLogViewer({ projectId, isGlobal = false }: { projectId?: st
         event: 'INSERT', 
         schema: 'public', 
         table: 'audit_logs', 
-        filter: projectId ? `project_id=eq.${projectId}` : undefined 
+        ...(projectId ? { filter: `project_id=eq.${projectId}` } : {})
       }, 
         () => {
           fetchLogs();
@@ -94,7 +100,7 @@ export function AuditLogViewer({ projectId, isGlobal = false }: { projectId?: st
     if (action.includes("Presupuesto")) return <Database size={14} className="text-emerald-600" />;
     if (action.includes("Tarea")) return <CheckCircle2 size={14} className="text-blue-600" />;
     if (action.includes("Hito")) return <Target size={14} className="text-orange-600" />;
-    if (action.includes("Equipo")) return <Users size={14} className="text-blue-600" />;
+    if (action.includes("Equipo") || action.includes("Seguridad")) return <Shield size={14} className="text-slate-900" />;
     if (action.includes("Memoria")) return <FileText size={14} className="text-blue-500" />;
     if (action.includes("Documentación")) return <FileUp size={14} className="text-blue-500" />;
     if (action.includes("Proyecto")) return <Briefcase size={14} className="text-slate-600" />;
@@ -161,6 +167,11 @@ export function AuditLogViewer({ projectId, isGlobal = false }: { projectId?: st
                   <span className="text-slate-900 font-black">{log.user?.full_name || "Usuario"}</span> 
                   {" "}
                   {log.details?.description || (typeof log.details === 'string' ? log.details : "realizó una acción técnica")}
+                  {isGlobal && log.projects?.name && (
+                    <span className="text-blue-600/60 font-medium italic ml-1 whitespace-nowrap">
+                      en {log.projects.name}
+                    </span>
+                  )}
                 </p>
               </div>
             </div>

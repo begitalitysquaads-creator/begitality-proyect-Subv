@@ -319,10 +319,15 @@ export function AutoImproveModal({ projectId, isOpen, onClose, onComplete }: Aut
                                             />
                                             <div className="flex-1 min-w-0">
                                                 <div className="flex items-center gap-2">
-                                                    <p className="text-[11px] font-black text-slate-800 truncate tracking-tight">{section.title}</p>
+                                                    <p className="text-sm font-bold text-slate-800 truncate">{section.title}</p>
                                                     <ScoreChip score={section.score} />
                                                 </div>
-                                                <p className={cn("text-[9px] font-black uppercase tracking-widest mt-0.5", cfg.color)}>{cfg.label}</p>
+                                                <div className="flex items-center gap-2 mt-0.5">
+                                                    <span className={cn("text-[11px] font-bold", cfg.color)}>{cfg.label}</span>
+                                                    {section.feedback && section.status !== "done" && (
+                                                        <span className="text-[10px] text-slate-400 truncate max-w-[250px]">· {section.feedback}</span>
+                                                    )}
+                                                </div>
                                             </div>
 
                                             {section.status === "done" && section.newContent && (
@@ -333,14 +338,13 @@ export function AutoImproveModal({ projectId, isOpen, onClose, onComplete }: Aut
                                                     className="p-1.5 rounded-lg hover:bg-emerald-100 transition-colors"
                                                 >
                                                     {section.expanded
-                                                        ? <ChevronUp size={14} className="text-emerald-500" />
-                                                        : <ChevronDown size={14} className="text-emerald-500" />
+                                                        ? <ChevronUp size={14} className="text-emerald-600" />
+                                                        : <ChevronDown size={14} className="text-emerald-600" />
                                                     }
                                                 </button>
                                             )}
                                         </div>
 
-                                        {/* Problems */}
                                         {(section.status === "pending" || section.status === "improving") && section.problems.length > 0 && (
                                             <div className="px-5 py-3 bg-white border-t border-slate-100 space-y-1">
                                                 <span className="text-[8px] font-black text-slate-300 uppercase tracking-[0.2em]">Problemas a resolver:</span>
@@ -353,14 +357,12 @@ export function AutoImproveModal({ projectId, isOpen, onClose, onComplete }: Aut
                                             </div>
                                         )}
 
-                                        {/* Improving indicator */}
                                         {section.status === "improving" && (
                                             <div className="h-0.5 bg-blue-100 overflow-hidden">
                                                 <div className="h-full w-1/3 bg-blue-500 rounded-full" style={{ animation: "pulseSlide 1.5s ease-in-out infinite" }} />
                                             </div>
                                         )}
 
-                                        {/* Expanded preview */}
                                         {section.expanded && section.newContent && (
                                             <div className="px-5 py-4 bg-white border-t border-emerald-100 animate-in slide-in-from-top-1 duration-200">
                                                 <div className="flex items-center gap-2 mb-2">
@@ -376,7 +378,6 @@ export function AutoImproveModal({ projectId, isOpen, onClose, onComplete }: Aut
                                             </div>
                                         )}
 
-                                        {/* Error detail */}
                                         {section.status === "error" && section.error && (
                                             <div className="px-5 py-3 bg-white border-t border-red-100">
                                                 <p className="text-[10px] text-red-600 font-medium">{section.error}</p>
@@ -388,7 +389,6 @@ export function AutoImproveModal({ projectId, isOpen, onClose, onComplete }: Aut
                         </div>
                     )}
 
-                    {/* Rediagnosing state */}
                     {phase === "rediagnosing" && (
                         <div className="px-6 pb-5">
                             <div className="flex items-center gap-3 p-5 bg-blue-50 border border-blue-100 rounded-2xl">
@@ -401,7 +401,6 @@ export function AutoImproveModal({ projectId, isOpen, onClose, onComplete }: Aut
                         </div>
                     )}
 
-                    {/* Done summary */}
                     {phase === "done" && result && (
                         <div className="px-6 pb-5">
                             <div className="flex items-start gap-3 p-5 bg-emerald-50 border border-emerald-100 rounded-2xl">

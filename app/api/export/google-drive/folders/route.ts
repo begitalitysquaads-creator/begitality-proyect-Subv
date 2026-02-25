@@ -10,6 +10,12 @@ export async function GET() {
     return NextResponse.json({ error: "Google Drive no vinculado" }, { status: 401 });
   }
 
+  // Verificar permisos (debe ser staff de Begitality)
+  const { data: isStaff } = await supabase.rpc("is_begitality_staff");
+  if (!isStaff) {
+     return NextResponse.json({ error: "No tienes permiso para acceder a este recurso" }, { status: 403 });
+  }
+
   try {
     // Listar carpetas en la unidad del usuario
     const response = await fetch(
@@ -52,6 +58,12 @@ export async function POST(req: Request) {
 
   if (!providerToken) {
     return NextResponse.json({ error: "Google Drive no vinculado" }, { status: 401 });
+  }
+
+  // Verificar permisos (debe ser staff de Begitality)
+  const { data: isStaff } = await supabase.rpc("is_begitality_staff");
+  if (!isStaff) {
+     return NextResponse.json({ error: "No tienes permiso para acceder a este recurso" }, { status: 403 });
   }
 
   try {

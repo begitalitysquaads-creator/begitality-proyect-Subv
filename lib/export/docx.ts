@@ -16,10 +16,12 @@ export interface GenerateDocxOptions {
   title: string;
   grantName: string;
   sections: DocxSection[];
+  viabilityReport?: any;
+  reviewReport?: any;
 }
 
 export async function generateDocx(options: GenerateDocxOptions): Promise<Buffer> {
-  const { title, grantName, sections } = options;
+  const { title, grantName, sections, viabilityReport, reviewReport } = options;
 
   const children: Paragraph[] = [
     new Paragraph({
@@ -40,6 +42,56 @@ export async function generateDocx(options: GenerateDocxOptions): Promise<Buffer
       spacing: { after: 400 },
     }),
   ];
+
+  // Añadir resumen de viabilidad si existe
+  if (viabilityReport) {
+    children.push(
+      new Paragraph({
+        text: "RESUMEN DE VIABILIDAD IA",
+        heading: HeadingLevel.HEADING_1,
+        spacing: { before: 400, after: 200 },
+      }),
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: `Puntuación Global: ${viabilityReport.overall_score}/100`,
+            bold: true,
+            color: viabilityReport.overall_score >= 75 ? "10B981" : "F59E0B",
+          }),
+        ],
+        spacing: { after: 100 },
+      }),
+      new Paragraph({
+        text: viabilityReport.summary,
+        spacing: { after: 400 },
+      })
+    );
+  }
+
+  // Añadir resumen de revisión técnica si existe
+  if (reviewReport) {
+    children.push(
+      new Paragraph({
+        text: "ANÁLISIS DE CALIDAD TÉCNICA",
+        heading: HeadingLevel.HEADING_1,
+        spacing: { before: 400, after: 200 },
+      }),
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: `Quality Score: ${reviewReport.score}/100`,
+            bold: true,
+            color: reviewReport.score >= 80 ? "10B981" : "F59E0B",
+          }),
+        ],
+        spacing: { after: 100 },
+      }),
+      new Paragraph({
+        text: reviewReport.summary,
+        spacing: { after: 400 },
+      })
+    );
+  }
 
   for (const section of sections) {
     children.push(

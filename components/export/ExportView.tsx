@@ -101,6 +101,16 @@ export function ExportView({ project }: ExportViewProps) {
   const totalSections = sections.length;
   const progressPercent = totalSections > 0 ? Math.round((completedSections / totalSections) * 100) : 0;
   
+  const getMaturityStatus = (percent: number) => {
+    if (percent === 100) return { label: "Certificable", sub: "Cumple requisitos 100%", color: "text-emerald-600 bg-emerald-50 border-emerald-100", icon: ShieldCheck };
+    if (percent > 75) return { label: "Consolidado", sub: "Revisión avanzada", color: "text-blue-600 bg-blue-50 border-blue-100", icon: Zap };
+    if (percent > 25) return { label: "En Redacción", sub: "Contenido parcial", color: "text-amber-600 bg-amber-50 border-amber-100", icon: Loader2 };
+    return { label: "Borrador", sub: "Estructura inicial", color: "text-slate-500 bg-slate-50 border-slate-100", icon: FileText };
+  };
+
+  const maturity = getMaturityStatus(progressPercent);
+  const StatusIcon = maturity.icon;
+
   const hasContent = sections.some(s => s.content && s.content.trim().length > 0);
   // Si hay contenido pero 0% completado, podríamos sugerir marcar secciones como revisadas
   const hasUnmarkedContent = !completedSections && hasContent;
@@ -152,21 +162,35 @@ export function ExportView({ project }: ExportViewProps) {
         body: JSON.stringify({ projectId: project.id, format: "pdf" }),
       });
       if (!res.ok) throw new Error("Error al generar PDF para impresión");
+      
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       
-      // Abrir en una nueva ventana para imprimir
-      window.open(url, '_blank');
+      // Crear un iframe invisible para imprimir sin abrir nueva pestaña
+      const iframe = document.createElement('iframe');
+      iframe.style.display = 'none';
+      iframe.src = url;
+      document.body.appendChild(iframe);
       
-      // Nota: No podemos cerrar la ventana automáticamente ni llamar a .print()
-      // de forma fiable en todos los navegadores desde el objeto retornado por window.open
-      // si el blob es un PDF nativo, el navegador ya muestra controles de impresión.
+      iframe.onload = () => {
+        iframe.contentWindow?.focus();
+        iframe.contentWindow?.print();
+        
+        // Limpieza tras un breve retraso para asegurar que el diálogo se abra
+        setTimeout(() => {
+          document.body.removeChild(iframe);
+          URL.revokeObjectURL(url);
+        }, 1000);
+      };
+
+      await logClientAction(project.id, "Documentación", "activó la impresión de la memoria técnica");
+      
     } catch (e) {
       console.error(e);
       setAlertDialog({
         open: true,
         title: "Error de impresión",
-        description: "No se pudo generar el documento para imprimir."
+        description: e instanceof Error ? e.message : "No se pudo generar el documento para imprimir."
       });
     } finally {
       setIsExporting(false);
@@ -277,17 +301,30 @@ export function ExportView({ project }: ExportViewProps) {
             </p>
           </div>
         </div>
-        <div className="flex gap-3">
-          {progressPercent === 100 ? (
-            <span className="flex items-center gap-2 bg-emerald-50 text-emerald-600 px-4 py-2 rounded-xl text-xs font-bold border border-emerald-100">
-              <ShieldCheck size={16} /> Verificado por IA
-            </span>
-          ) : (
-            <span className="flex items-center gap-2 bg-amber-50 text-amber-600 px-4 py-2 rounded-xl text-xs font-bold border border-amber-100">
-              <Loader2 size={16} className="animate-spin" /> {progressPercent}% Completado
-            </span>
+        
+        <div className="flex items-center gap-6">
+          <div className="hidden md:block text-right">
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Estado de Consolidación</p>
+            <div className="flex items-center gap-3">
+              <div className="w-32 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                <div 
+                  className={cn("h-full transition-all duration-1000", 
+                    progressPercent === 100 ? "bg-emerald-500" : "bg-blue-500"
+                  )}
+                  style={{ width: `${progressPercent}%` }}
+                />
+              </div>
+              <span className="text-xs font-black text-slate-900">{progressPercent}%</span>
+            </div>
+          </div>
 
-          )}
+          <div className={cn("flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold border transition-all shadow-sm", maturity.color)}>
+            <StatusIcon size={16} className={maturity.label === "En Redacción" ? "animate-spin" : ""} />
+            <div className="flex flex-col">
+              <span className="leading-none uppercase tracking-wider text-[9px] mb-0.5">{maturity.label}</span>
+              <span className="leading-none opacity-60 text-[8px] font-medium">{maturity.sub}</span>
+            </div>
+          </div>
         </div>
       </header>
 
@@ -358,17 +395,17 @@ export function ExportView({ project }: ExportViewProps) {
               <Sparkles size={120} />
             </div>
             <h3 className="text-xl font-bold mb-2">
-              {progressPercent === 100 ? "¿Todo listo?" : "Trabajo en curso"}
+              {maturity.label}
             </h3>
             {hasUnmarkedContent && (
               <p className="text-amber-400 text-[10px] mb-2 font-bold uppercase tracking-wider animate-pulse">
-                ⚠️ Hay contenido sin marcar como REVISADO
+                ⚠️ Hay secciones sin revisar
               </p>
             )}
             <p className="text-slate-400 text-sm mb-6 font-medium">
               {progressPercent === 100 
-                ? "Hemos analizado el documento y cumple con el 100% de los requisitos detectados."
-                : `Has completado ${completedSections} de ${totalSections} secciones requeridas.`}
+                ? "El expediente cumple con todos los estándares técnicos para su presentación oficial."
+                : `Nivel de madurez actual: ${progressPercent}%. Faltan ${totalSections - completedSections} secciones por validar.`}
             </p>
             <div className="space-y-4 mb-8">
               <div className="flex items-center gap-3 text-sm">

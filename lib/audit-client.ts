@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/client";
  * El RLS de Supabase se encarga de validar que el usuario está autenticado.
  */
 export async function logClientAction(
-  projectId: string,
+  projectId: string | null,
   action: string,
   description: string,
   details: any = {}

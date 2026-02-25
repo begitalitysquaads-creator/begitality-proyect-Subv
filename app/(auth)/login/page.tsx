@@ -29,18 +29,17 @@ function LoginForm() {
 
     const needsMfa = searchParams.get("mfa") === "true";
     if (needsMfa) {
-      // Intentar recuperar el factor ID si existe en la sesión
       const checkMfa = async () => {
         const { data: factors } = await supabase.auth.mfa.listFactors();
-        const activeFactor = factors?.all.find(f => f.status === 'verified');
+        const activeFactor = factors?.all.find((f) => f.status === "verified");
         if (activeFactor) {
           setFactorId(activeFactor.id);
           setShowMfa(true);
         }
       };
-      checkMfa();
+      void checkMfa();
     }
-  }, [searchParams]);
+  }, [searchParams, supabase]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -101,6 +100,11 @@ function LoginForm() {
       setError(verifyError.message);
       setLoading(false);
     } else {
+      // Limpiamos el estado sensible de MFA tras una verificación correcta
+      setMfaCode("");
+      setFactorId(null);
+      setShowMfa(false);
+      setLoading(false);
       router.push(redirect);
       router.refresh();
     }

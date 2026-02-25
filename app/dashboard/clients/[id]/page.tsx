@@ -12,6 +12,7 @@ import {
   Check
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { logClientAction } from "@/lib/audit-client";
 import { Client, Project } from "@/lib/types";
 import * as Label from "@radix-ui/react-label";
 import * as Dialog from "@radix-ui/react-dialog";
@@ -201,16 +202,22 @@ export default function ClientDetailsPage({ params }: { params: Promise<{ id: st
     }).eq("id", id);
 
     if (err) setError(err.message);
-    else { setIsEditing(false); loadData(); }
+    else { 
+      await logClientAction(null, "Cliente", `actualizó el perfil técnico de "${formData.name}"`);
+      setIsEditing(false); 
+      loadData(); 
+    }
     setSaving(false);
   };
 
   const handleArchive = async () => {
     const nextStatus = client.status === 'archived' ? 'active' : 'archived';
+    const actionDesc = nextStatus === 'archived' ? 'archivó' : 'restauró';
     setArchiving(true);
     const { error: err } = await supabase.from("clients").update({ status: nextStatus }).eq("id", id);
     if (err) setError(err.message);
     else {
+      await logClientAction(null, "Cliente", `${actionDesc} al cliente "${client.name}"`);
       setConfirmArchive({ ...confirmArchive, open: false });
       loadData();
     }

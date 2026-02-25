@@ -4,6 +4,7 @@ import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import { PlusCircle, Search, Building2, Mail, Phone, ExternalLink, Archive, CheckCircle2, Layers, Zap, Trash2, Loader2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { logClientAction } from "@/lib/audit-client";
 import { Client } from "@/lib/types";
 import * as Tabs from "@radix-ui/react-tabs";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
@@ -43,6 +44,7 @@ export default function ClientsListPage() {
       .eq("id", confirmArchive.id);
 
     if (!error) {
+      await logClientAction(null, "Cliente", `archivó al cliente "${confirmArchive.name}"`);
       setConfirmArchive({ open: false, id: "", name: "" });
       loadClients();
     }

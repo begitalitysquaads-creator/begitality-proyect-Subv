@@ -104,23 +104,28 @@ export async function GET(request: NextRequest) {
     }
 
     // ── 2. VERIFICACIÓN DE MFA ──────────────────────────────────────
+    // Nota: la elevación a AAL2 solo ocurre DESPUÉS del reto/verificación TOTP.
+    // Aquí solo detectamos si el usuario tiene factores MFA verificados y,
+    // en ese caso, delegamos la verificación al flujo de login (pantalla MFA).
     const { data: factors } = await supabase.auth.mfa.listFactors();
-    const isMfaEnabled = factors?.all.some(f => f.status === 'verified');
+    const isMfaEnabled = factors?.all.some((f) => f.status === "verified");
 
-    const { data: { session } } = await supabase.auth.getSession();
-    const isAal2 = session?.user.aud === 'authenticated' && session?.user.app_metadata?.aal === 'aal2';
-
-    if (isMfaEnabled && !isAal2) {
+    if (isMfaEnabled) {
       const mfaUrl = new URL("/login", requestUrl.origin);
       mfaUrl.searchParams.set("mfa", "true");
       return NextResponse.redirect(mfaUrl);
     }
 
     // ── 3. ACTUALIZAR ÚLTIMO LOGIN ──────────────────────────────────
-    await supabaseAdmin
+    const { error: lastLoginError } = await supabaseAdmin
       .from("profiles")
       .update({ last_login: new Date().toISOString() })
       .eq("id", user.id);
+
+    if (lastLoginError) {
+      // No bloqueamos el acceso, pero nunca fallamos en silencio
+      console.error("[AUTH CALLBACK] Error al registrar last_login:", lastLoginError);
+    }
 
     // Todo correcto → redirigir al destino
     return response;

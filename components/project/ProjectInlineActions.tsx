@@ -101,6 +101,7 @@ export function ProjectInlineActions({ projectId, projectName, projectStatus }: 
       .eq("id", projectId);
 
     if (!error) {
+      await logClientAction(null, "Proyecto", `eliminó permanentemente el expediente "${projectName}"`);
       setDeleteOpen(false);
       router.push("/dashboard/projects");
     }

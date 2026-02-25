@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 
 export async function logAuditAction(
-  projectId: string,
+  projectId: string | null,
   userId: string,
   action: string,
   details: any = {}

@@ -8,6 +8,7 @@ import {
   ChevronDown, UserCheck, Search, TrendingUp, Calendar, Users, Zap, MapPin
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { logClientAction } from "@/lib/audit-client";
 import * as Label from "@radix-ui/react-label";
 import { BackButton } from "@/components/ui/BackButton";
 import { PremiumSelector } from "@/components/ui/PremiumSelector";
@@ -133,6 +134,7 @@ export default function NewClientPage() {
       setError(err.message);
       setLoading(false);
     } else {
+      await logClientAction(null, "Cliente", `creó el nuevo cliente "${name}"`);
       window.location.href = `/dashboard/clients/${data.id}`;
     }
   }

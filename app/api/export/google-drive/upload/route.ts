@@ -1,26 +1,39 @@
 import { createClient } from "@/lib/supabase/server";
+import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
 
 export async function POST(req: Request) {
   const supabase = await createClient();
   const { data: { session } } = await supabase.auth.getSession();
   const providerToken = session?.provider_token;
+  const userId = session?.user?.id;
 
-  if (!providerToken) {
+  if (!providerToken || !userId) {
     return NextResponse.json({ error: "Google Drive no vinculado" }, { status: 401 });
   }
 
   try {
     const { projectId, folderId } = await req.json();
 
-    // 1. Obtener datos del proyecto
-    const { data: project } = await supabase
+    // 1. Obtener datos del proyecto (usando admin para verificar existencia primero)
+    const supabaseAdmin = createAdminClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+
+    const { data: project } = await supabaseAdmin
       .from("projects")
       .select("id, name, grant_name, viability_report, review_report")
       .eq("id", projectId)
       .single();
 
     if (!project) return NextResponse.json({ error: "Proyecto no encontrado" }, { status: 404 });
+
+    // Verificar permisos (debe ser staff de Begitality)
+    const { data: isStaff } = await supabase.rpc("is_begitality_staff");
+    if (!isStaff) {
+       return NextResponse.json({ error: "No tienes permiso para acceder a este proyecto" }, { status: 403 });
+    }
 
     const { data: sections } = await supabase
       .from("sections")

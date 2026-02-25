@@ -34,8 +34,19 @@ function UpdatePasswordForm() {
     }
 
     const supabase = createClient();
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+
+    if (userError || !user) {
+      setLoading(false);
+      setError(userError?.message ?? "No se pudo obtener el usuario actual.");
+      return;
+    }
+
     const { error: err } = await supabase.auth.updateUser({
-      password: password,
+      password,
     });
 
     if (err) {
@@ -48,7 +59,7 @@ function UpdatePasswordForm() {
     const { error: profileError } = await supabase
       .from("profiles")
       .update({ is_active: true })
-      .eq("id", (await supabase.auth.getUser()).data.user?.id);
+      .eq("id", user.id);
 
     if (profileError) {
       console.error("Error al activar perfil:", profileError);

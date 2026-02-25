@@ -1,6 +1,3 @@
--- 027_project_diagnostics.sql
--- Objetivo: Crear tabla de diagnósticos de proyectos para análisis de viabilidad.
-
 CREATE TABLE IF NOT EXISTS public.project_diagnostics (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   project_id UUID NOT NULL REFERENCES public.projects(id) ON DELETE CASCADE,

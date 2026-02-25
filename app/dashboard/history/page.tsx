@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo, useRef } from "react";
+import { useEffect, useState, useMemo, useRef, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { 
   FileText, Building2, Calendar, Award, ChevronRight, 
@@ -26,29 +26,25 @@ export default function HistoryPage() {
   const supabase = createClient();
   const menuRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    let mounted = true;
+  const loadHistory = useCallback(async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
 
-    async function loadHistory() {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user || !mounted) return;
+    const { data, error } = await supabase
+      .from("projects")
+      .select("*, client:clients(*)")
+      .in("status", ["exported", "archived", "finished"])
+      .order("updated_at", { ascending: false });
 
-      const { data, error } = await supabase
-        .from("projects")
-        .select("*, client:clients(*)")
-        .in("status", ["exported", "archived", "finished"])
-        .order("updated_at", { ascending: false });
-
-      if (error) {
-        console.error("Error loading history:", error.message);
-      }
-
-      if (mounted) {
-        setProjects(data || []);
-        setLoading(false);
-      }
+    if (error) {
+      console.error("Error loading history:", error.message);
+    } else {
+      setProjects(data || []);
     }
+    setLoading(false);
+  }, [supabase]);
 
+  useEffect(() => {
     loadHistory();
 
     // SUSCRIPCIÓN REALTIME
@@ -73,11 +69,10 @@ export default function HistoryPage() {
     document.addEventListener("mousedown", handleClickOutside);
     
     return () => {
-      mounted = false;
       supabase.removeChannel(channel);
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [supabase]);
+  }, [supabase, loadHistory]);
 
   const handleRestore = async (projectId: string, name: string) => {
     setIsActionLoading(true);
@@ -89,6 +84,9 @@ export default function HistoryPage() {
       
       if (error) throw error;
       await logClientAction(projectId, "Proyecto: Restaurado", `restauró el proyecto "${name}" desde el histórico`);
+      
+      // Forzar recarga inmediata para evitar latencia de Realtime
+      await loadHistory();
     } catch (e) {
       console.error(e);
     } finally {
@@ -105,7 +103,11 @@ export default function HistoryPage() {
         .eq("id", confirmDelete.id);
       
       if (error) throw error;
+      await logClientAction(null, "Proyecto", `eliminó permanentemente el expediente "${confirmDelete.name}" desde el histórico`);
       setConfirmDelete({ open: false, id: "", name: "" });
+      
+      // Forzar recarga inmediata
+      await loadHistory();
     } catch (e) {
       console.error(e);
     } finally {
@@ -286,7 +288,7 @@ export default function HistoryPage() {
               key={p.id}
               className="group bg-white border border-slate-200 rounded-[2.5rem] p-8 hover:shadow-2xl hover:shadow-blue-500/5 transition-all flex flex-col md:flex-row md:items-center justify-between gap-6"
             >
-              <Link href={p.status === 'exported' ? `/dashboard/projects/${p.id}/export` : `/dashboard/projects/${p.id}`} className="flex items-center gap-6 flex-1">
+              <Link href={`/dashboard/projects/${p.id}/export`} className="flex items-center gap-6 flex-1">
                 <div className={cn(
                   "w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg transition-transform group-hover:rotate-3",
                   p.status === 'archived' ? "bg-slate-100 text-slate-400 shadow-none border border-slate-200" : 
@@ -397,7 +399,7 @@ export default function HistoryPage() {
                     </button>
                   </StyledTooltip>
 
-                  <Link href={p.status === 'exported' ? `/dashboard/projects/${p.id}/export` : `/dashboard/projects/${p.id}`} className="p-3 bg-slate-900 text-white rounded-xl hover:bg-blue-600 transition-all shadow-lg shadow-slate-900/10 active:scale-90 ml-2">
+                  <Link href={`/dashboard/projects/${p.id}/export`} className="p-3 bg-slate-900 text-white rounded-xl hover:bg-blue-600 transition-all shadow-lg shadow-slate-900/10 active:scale-90 ml-2">
                     <ChevronRight size={18} />
                   </Link>
                 </div>

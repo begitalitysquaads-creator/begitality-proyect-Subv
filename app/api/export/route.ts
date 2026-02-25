@@ -82,6 +82,8 @@ export async function POST(req: Request) {
     const buffer = await generateDocx({
       title: project.name,
       grantName: project.grant_name,
+      viabilityReport: project.viability_report,
+      reviewReport: project.review_report,
       sections: sectionsList.map((s) => ({ title: s.title, content: s.content })),
     });
     const filename = `Memoria_Tecnica_${project.name.replace(/\s+/g, "_")}.docx`;

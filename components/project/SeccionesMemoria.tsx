@@ -6,7 +6,8 @@ import Link from "next/link";
 import { 
   FileText, Loader2, Sparkles, Save, CheckCircle2, 
   ChevronDown, ChevronUp, BookOpen, Clock, FileCheck,
-  RotateCcw, Wand2, FileSearch, Target, Trash2, Edit2, Plus, Check, X
+  RotateCcw, Wand2, FileSearch, Target, Trash2, Edit2, Plus, Check, X,
+  GripVertical
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
@@ -48,6 +49,8 @@ export function SeccionesMemoria({
   const [editingTitleId, setEditingTitleId] = useState<string | null>(null);
   const [newTitleValue, setNewTitleValue] = useState("");
   const [savingTitle, setSavingTitle] = useState(false);
+  const [isAddingSection, setIsAddingSection] = useState(false);
+  const [isReordering, setIsReordering] = useState(false);
   
   const router = useRouter();
   const supabase = createClient();
@@ -209,6 +212,94 @@ export function SeccionesMemoria({
     }
   };
 
+  const handleAddSection = async () => {
+    setIsAddingSection(true);
+    try {
+      const nextOrder = sections.length > 0 
+        ? Math.max(...sections.map(s => s.sort_order)) + 1 
+        : 0;
+
+      const { data, error } = await supabase
+        .from("sections")
+        .insert({
+          project_id: projectId,
+          title: "Nueva Sección",
+          content: "",
+          sort_order: nextOrder,
+          is_completed: false
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      if (data) {
+        await logClientAction(projectId, "Memoria", "añadió una nueva sección manualmente");
+        setSections(prev => [...prev, data]);
+        setSelectedId(data.id);
+        // Activar edición de título inmediatamente
+        setEditingTitleId(data.id);
+        setNewTitleValue("Nueva Sección");
+      }
+    } catch (e) {
+      console.error("Error adding section:", e);
+    } finally {
+      setIsAddingSection(false);
+    }
+  };
+
+  const moveSection = async (id: string, direction: 'up' | 'down') => {
+    const currentIndex = sections.findIndex(s => s.id === id);
+    if (currentIndex === -1) return;
+    
+    const targetIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+    if (targetIndex < 0 || targetIndex >= sections.length) return;
+
+    setIsReordering(true);
+    const currentSection = sections[currentIndex];
+    const targetSection = sections[targetIndex];
+
+    try {
+      // Intercambiar órdenes de ordenación
+      const currentOrder = currentSection.sort_order;
+      const targetOrder = targetSection.sort_order;
+
+      // Actualización local inmediata
+      const newSections = [...sections];
+      newSections[currentIndex] = { ...currentSection, sort_order: targetOrder };
+      newSections[targetIndex] = { ...targetSection, sort_order: currentOrder };
+      
+      // Actualizar el array local para reflejar el cambio en la UI
+      newSections.sort((a, b) => a.sort_order - b.sort_order);
+      setSections(newSections);
+
+      // Actualizar DB con dos updates independientes (más robusto que upsert para RLS)
+      const update1 = supabase
+        .from("sections")
+        .update({ sort_order: targetOrder })
+        .eq("id", currentSection.id);
+
+      const update2 = supabase
+        .from("sections")
+        .update({ sort_order: currentOrder })
+        .eq("id", targetSection.id);
+
+      const results = await Promise.all([update1, update2]);
+      const error = results.find(r => r.error)?.error;
+
+      if (error) throw error;
+      
+      await logClientAction(projectId, "Memoria", `reorganizó el índice de secciones`);
+    } catch (e) {
+      console.error("Error reordering:", e);
+      // Recargar de la DB si falla para asegurar consistencia
+      const { data } = await supabase.from("sections").select("*").eq("project_id", projectId).order("sort_order");
+      if (data) setSections(data);
+    } finally {
+      setIsReordering(false);
+    }
+  };
+
   const totalWords = sections.reduce((acc, s) => acc + (s.content?.split(/\s+/).filter(Boolean).length || 0), 0);
   const completedCount = sections.filter(s => s.is_completed).length;
 
@@ -240,13 +331,14 @@ export function SeccionesMemoria({
               <Trash2 size={20} />
             </button>
           )}
-          <Link
-            href={`/dashboard/projects/${projectId}/export`}
-            className="flex items-center gap-2 px-5 py-2.5 bg-white border border-slate-200 text-slate-500 rounded-xl font-black text-[9px] uppercase tracking-widest hover:bg-slate-50 transition-all shadow-sm active:scale-95"
+          <button
+            onClick={handleAddSection}
+            disabled={isAddingSection}
+            className="flex items-center gap-2 px-5 py-2.5 bg-white border border-slate-200 text-slate-500 rounded-xl font-black text-[9px] uppercase tracking-widest hover:bg-slate-50 transition-all shadow-sm active:scale-95 disabled:opacity-50"
           >
-            <Save size={14} />
-            Exportar
-          </Link>
+            {isAddingSection ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
+            Añadir Sección
+          </button>
           {hasConvocatoriaFiles && (
             <button
               onClick={handleGenerate}
@@ -289,7 +381,7 @@ export function SeccionesMemoria({
         </div>
       ) : (
         <div className="space-y-3">
-          {sections.map((s) => {
+          {sections.map((s, index) => {
             const isSelected = selectedId === s.id;
             const words = s.content?.split(/\s+/).filter(Boolean).length || 0;
             return (
@@ -306,6 +398,25 @@ export function SeccionesMemoria({
                 <div
                   className="w-full flex items-center justify-between p-5 text-left group cursor-default"
                 >
+                  <div className="flex flex-col gap-1 mr-4 shrink-0 border-r border-slate-50 pr-4">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); moveSection(s.id, 'up'); }}
+                      disabled={index === 0 || isReordering}
+                      className="p-1 text-slate-300 hover:text-blue-600 disabled:opacity-0 transition-all active:scale-90"
+                      title="Subir sección"
+                    >
+                      <ChevronUp size={14} />
+                    </button>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); moveSection(s.id, 'down'); }}
+                      disabled={index === sections.length - 1 || isReordering}
+                      className="p-1 text-slate-300 hover:text-blue-600 disabled:opacity-0 transition-all active:scale-90"
+                      title="Bajar sección"
+                    >
+                      <ChevronDown size={14} />
+                    </button>
+                  </div>
+
                   <div 
                     className="flex items-center gap-4 flex-1 min-w-0 cursor-pointer"
                     onClick={() => setSelectedId(isSelected ? null : s.id)}
@@ -317,7 +428,7 @@ export function SeccionesMemoria({
                     
                     <div className="flex-1 min-w-0">
                       {editingTitleId === s.id ? (
-                        <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center gap-2 pr-6" onClick={(e) => e.stopPropagation()}>
                           <input 
                             autoFocus
                             value={newTitleValue}
@@ -347,6 +458,7 @@ export function SeccionesMemoria({
                           "text-base tracking-tight block leading-tight truncate",
                           isSelected ? "text-blue-600 font-black" : "text-slate-800 font-bold"
                         )}>
+                          <span className="text-slate-400 mr-2">{index + 1}.</span>
                           {s.title}
                         </span>
                       )}

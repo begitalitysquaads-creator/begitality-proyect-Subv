@@ -4,6 +4,7 @@ import { useEffect, useState, useMemo, useCallback } from "react";
 import Link from "next/link";
 import { PlusCircle, FileText, Search, Building2, ChevronRight, User, Zap, Archive, Layers, Calendar, Loader2, Clock, ShieldCheck } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { logClientAction } from "@/lib/audit-client";
 import { Project } from "@/lib/types";
 import * as Tabs from "@radix-ui/react-tabs";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
@@ -61,6 +62,7 @@ export default function ProjectsPage() {
       .eq("id", confirmArchive.id);
 
     if (!error) {
+      await logClientAction(confirmArchive.id, "Proyecto", `archivó el proyecto "${confirmArchive.name}"`);
       setConfirmArchive({ open: false, id: "", name: "" });
       loadProjects();
     }
