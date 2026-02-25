@@ -179,15 +179,20 @@ export function ExportView({ project }: ExportViewProps) {
       
       iframe.onload = () => {
         setTimeout(() => {
-          iframe.contentWindow?.focus();
-          iframe.contentWindow?.print();
+          if (!iframe.contentWindow) return;
           
-          // Limpieza
+          iframe.contentWindow.focus();
+          iframe.contentWindow.print();
+          
+          // Limpieza extendida: 
+          // Aumentamos a 10 segundos para dar tiempo al navegador a gestionar el spool de impresión
           setTimeout(() => {
-            document.body.removeChild(iframe);
+            if (document.body.contains(iframe)) {
+              document.body.removeChild(iframe);
+            }
             URL.revokeObjectURL(url);
-          }, 2000);
-        }, 500);
+          }, 10000);
+        }, 1000);
       };
 
       await logClientAction(project.id, "Documentación", "activó la impresión de la memoria técnica");
