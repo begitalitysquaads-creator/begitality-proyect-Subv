@@ -8,8 +8,15 @@ export async function POST(req: Request) {
   const providerToken = session?.provider_token;
   const userId = session?.user?.id;
 
-  if (!providerToken || !userId) {
-    return NextResponse.json({ error: "Google Drive no vinculado" }, { status: 401 });
+  if (!userId) {
+    return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  }
+
+  if (!providerToken) {
+    return NextResponse.json({ 
+      error: "Google Drive no vinculado",
+      detail: "Tu sesión de Google ha caducado o no está activa. Por favor, pulsa en 'Activar Google Drive' para renovar el acceso."
+    }, { status: 401 });
   }
 
   try {

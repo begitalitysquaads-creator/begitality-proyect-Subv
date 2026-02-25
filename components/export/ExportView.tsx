@@ -24,6 +24,7 @@ import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { PremiumSelector } from "@/components/ui/PremiumSelector";
 import { logClientAction } from "@/lib/audit-client";
 import { cn } from "@/lib/utils";
+import { createClient } from "@/lib/supabase/client";
 
 interface SectionData {
   id: string;
@@ -92,8 +93,16 @@ export function ExportView({ project }: ExportViewProps) {
   const [newFolderName, setNewFolderName] = useState("");
   const [showNewFolderInput, setShowNewFolderInput] = useState(false);
   const [exportComplete, setExportComplete] = useState(false);
-  const [alertDialog, setAlertDialog] = useState<{open: boolean, title: string, description: string}>({
-    open: false, title: "", description: ""
+  const [alertDialog, setAlertDialog] = useState<{
+    open: boolean;
+    title: string;
+    description: string;
+    confirmText?: string;
+    onConfirm?: () => void;
+  }>({
+    open: false,
+    title: "",
+    description: ""
   });
 
   const sections = project.sections ?? [];
@@ -226,12 +235,49 @@ export function ExportView({ project }: ExportViewProps) {
     try {
       const res = await fetch("/api/export/google-drive/folders");
       
-      if (res.status === 401 || res.status === 403) {
+      if (res.status === 401) {
+        setAlertDialog({
+          open: true,
+          title: "Sesión de Google necesaria",
+          description: "Para acceder a Google Drive necesitas haber iniciado sesión con Google. Pulsa el botón para activar la conexión ahora.",
+          confirmText: "Activar Google Drive",
+          onConfirm: async () => {
+            const supabase = createClient();
+            const { error } = await supabase.auth.signInWithOAuth({
+              provider: "google",
+              options: {
+                redirectTo: window.location.href,
+                queryParams: {
+                  prompt: 'select_account',
+                  access_type: 'offline',
+                },
+                scopes: 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/drive.metadata.readonly'
+              },
+            });
+            if (error) console.error(error);
+          }
+        });
+        return;
+      }
+
+      if (res.status === 403) {
         const errorData = await res.json().catch(() => ({}));
         setAlertDialog({
           open: true,
-          title: res.status === 401 ? "Cuenta no vinculada" : "Permisos faltantes",
-          description: errorData.detail || "No hemos detectado una vinculación activa con Google Drive o faltan permisos. Por favor, asegúrate de haber iniciado sesión con Google y concedido permisos de Drive."
+          title: "Permisos faltantes",
+          description: errorData.detail || "No tienes permisos suficientes para acceder a Drive.",
+          confirmText: "Re-vincular cuenta",
+          onConfirm: async () => {
+            const supabase = createClient();
+            await supabase.auth.signInWithOAuth({
+              provider: "google",
+              options: {
+                redirectTo: window.location.href,
+                queryParams: { prompt: 'select_account', access_type: 'offline' },
+                scopes: 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/drive.metadata.readonly'
+              }
+            });
+          }
         });
         return;
       }

@@ -7,7 +7,10 @@ export async function GET() {
   const providerToken = session?.provider_token;
 
   if (!providerToken) {
-    return NextResponse.json({ error: "Google Drive no vinculado" }, { status: 401 });
+    return NextResponse.json({ 
+      error: "Google Drive no vinculado",
+      detail: "Tu sesión actual no tiene permisos de Google. Por favor, pulsa en 'Activar Google Drive' para continuar."
+    }, { status: 401 });
   }
 
   // Verificar permisos (debe ser staff de Begitality)
@@ -57,7 +60,10 @@ export async function POST(req: Request) {
   const providerToken = session?.provider_token;
 
   if (!providerToken) {
-    return NextResponse.json({ error: "Google Drive no vinculado" }, { status: 401 });
+    return NextResponse.json({ 
+      error: "Google Drive no vinculado",
+      detail: "Tu sesión actual no tiene permisos de Google. Por favor, pulsa en 'Activar Google Drive' para continuar."
+    }, { status: 401 });
   }
 
   // Verificar permisos (debe ser staff de Begitality)
