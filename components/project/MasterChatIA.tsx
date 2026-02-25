@@ -62,29 +62,15 @@ export function MasterChatIA({ projectId }: { projectId: string }) {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [projectId]);
 
-  useEffect(() => {
-    // Forzar scroll al inicio en la carga inicial
-    window.scrollTo(0, 0);
-    
-    // Desbloquear scroll del chat tras 2 segundos (tiempo de carga de otros componentes)
-    const timer = setTimeout(() => {
-      scrollLockRef.current = false;
-    }, 2000);
-    
-    return () => clearTimeout(timer);
-  }, []);
-
-  useEffect(() => {
-    if (scrollLockRef.current) return;
-
-    if (prevMessagesCount.current !== -1 && messages.length > prevMessagesCount.current) {
-      // Usamos block: "nearest" para que NO mueva toda la ventana del navegador,
-      // sino solo el contenedor scrollable más cercano (el chat).
-      chatEndRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  const scrollToBottom = (behavior: ScrollBehavior = "smooth") => {
+    if (chatEndRef.current) {
+      chatEndRef.current.scrollIntoView({ behavior, block: "nearest" });
     }
-    
-    prevMessagesCount.current = messages.length;
-  }, [messages]);
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages, isChatting]);
 
   const loadChatHistory = async () => {
     const { data } = await supabase
@@ -92,7 +78,12 @@ export function MasterChatIA({ projectId }: { projectId: string }) {
       .select("role, content")
       .eq("project_id", projectId)
       .order("created_at", { ascending: true });
-    setMessages((data as Message[]) || []);
+    
+    if (data) {
+      setMessages(data as Message[]);
+      // Forzar scroll instantáneo tras el render inicial del histórico
+      setTimeout(() => scrollToBottom("instant"), 100);
+    }
   };
 
   const loadSections = async () => {

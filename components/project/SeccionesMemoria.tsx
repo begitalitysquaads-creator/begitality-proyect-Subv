@@ -51,6 +51,8 @@ export function SeccionesMemoria({
   const [savingTitle, setSavingTitle] = useState(false);
   const [isAddingSection, setIsAddingSection] = useState(false);
   const [isReordering, setIsReordering] = useState(false);
+  const [draggedId, setDraggedId] = useState<string | null>(null);
+  const [dragOverId, setDragOverId] = useState<string | null>(null);
   
   const router = useRouter();
   const supabase = createClient();
@@ -300,6 +302,62 @@ export function SeccionesMemoria({
     }
   };
 
+  const handleDragStart = (id: string) => {
+    setDraggedId(id);
+  };
+
+  const handleDragOver = (e: React.DragEvent, id: string) => {
+    e.preventDefault();
+    if (draggedId !== id) {
+      setDragOverId(id);
+    }
+  };
+
+  const handleDrop = async (e: React.DragEvent, targetId: string) => {
+    e.preventDefault();
+    setDragOverId(null);
+    if (!draggedId || draggedId === targetId) return;
+
+    const currentIndex = sections.findIndex(s => s.id === draggedId);
+    const targetIndex = sections.findIndex(s => s.id === targetId);
+    
+    if (currentIndex === -1 || targetIndex === -1) return;
+
+    setIsReordering(true);
+    const newSections = [...sections];
+    const [draggedItem] = newSections.splice(currentIndex, 1);
+    newSections.splice(targetIndex, 0, draggedItem);
+
+    // Re-asignar sort_order basado en la nueva posición
+    const updatedSections = newSections.map((s, i) => ({ ...s, sort_order: i }));
+    setSections(updatedSections);
+
+    try {
+      const updates = updatedSections.map(s => ({
+        id: s.id,
+        sort_order: s.sort_order
+      }));
+
+      const { error } = await supabase
+        .from("sections")
+        .upsert(updates);
+
+      if (error) {
+        const promises = updates.map(u => 
+          supabase.from("sections").update({ sort_order: u.sort_order }).eq("id", u.id)
+        );
+        await Promise.all(promises);
+      }
+      
+      await logClientAction(projectId, "Memoria", "reorganizó el orden de las secciones");
+    } catch (e) {
+      console.error("Error updating order:", e);
+    } finally {
+      setDraggedId(null);
+      setIsReordering(false);
+    }
+  };
+
   const totalWords = sections.reduce((acc, s) => acc + (s.content?.split(/\s+/).filter(Boolean).length || 0), 0);
   const completedCount = sections.filter(s => s.is_completed).length;
 
@@ -386,35 +444,29 @@ export function SeccionesMemoria({
             const words = s.content?.split(/\s+/).filter(Boolean).length || 0;
             return (
               <div 
-                key={s.id} 
+                key={s.id}
+                draggable={!editingTitleId && !generating}
+                onDragStart={() => handleDragStart(s.id)}
+                onDragOver={(e) => handleDragOver(e, s.id)}
+                onDrop={(e) => handleDrop(e, s.id)}
+                onDragEnd={() => { setDraggedId(null); setDragOverId(null); }}
                 className={cn(
                   "bg-white border transition-all duration-500 overflow-hidden",
                   isSelected 
                     ? "rounded-[2rem] border-blue-200 shadow-xl ring-4 ring-blue-500/5 scale-[1.01]" 
-                    : "rounded-2xl border-slate-100 hover:border-blue-100 hover:shadow-md"
+                    : "rounded-2xl border-slate-100 hover:border-blue-100 hover:shadow-md",
+                  dragOverId === s.id && "border-t-4 border-t-blue-500",
+                  draggedId === s.id && "opacity-40 grayscale"
                 )}
               >
                 {/* CABECERA ACORDEÓN */}
                 <div
                   className="w-full flex items-center justify-between p-5 text-left group cursor-default"
                 >
-                  <div className="flex flex-col gap-1 mr-4 shrink-0 border-r border-slate-50 pr-4">
-                    <button
-                      onClick={(e) => { e.stopPropagation(); moveSection(s.id, 'up'); }}
-                      disabled={index === 0 || isReordering}
-                      className="p-1 text-slate-300 hover:text-blue-600 disabled:opacity-0 transition-all active:scale-90"
-                      title="Subir sección"
-                    >
-                      <ChevronUp size={14} />
-                    </button>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); moveSection(s.id, 'down'); }}
-                      disabled={index === sections.length - 1 || isReordering}
-                      className="p-1 text-slate-300 hover:text-blue-600 disabled:opacity-0 transition-all active:scale-90"
-                      title="Bajar sección"
-                    >
-                      <ChevronDown size={14} />
-                    </button>
+                  <div className="flex items-center gap-2 mr-4 shrink-0 border-r border-slate-50 pr-4">
+                    <div className="cursor-grab active:cursor-grabbing p-2 text-slate-300 hover:text-blue-600 transition-colors">
+                      <GripVertical size={18} />
+                    </div>
                   </div>
 
                   <div 

@@ -40,6 +40,8 @@ export async function POST(
     INSTRUCCIONES ADICIONALES DE REDACCIÓN:
     ${project.writing_instructions || "Utiliza un tono profesional y técnico estándar."}
     
+    IMPORTANTE: No añadas numeración (ej: "1. Introducción") a los títulos de las secciones. Devuelve solo el nombre limpio.
+    
     RESPONDE EXCLUSIVAMENTE EN FORMATO JSON PURO (ARRAY DE OBJETOS).
     Esquema: [{ "title": "string", "content": "string" }]`;
 
