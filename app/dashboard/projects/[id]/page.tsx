@@ -116,8 +116,6 @@ export default async function ProjectWorkspacePage({
 
   return (
     <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in duration-500 pb-20">
-      {/* Scroll-to-top safeguard */}
-      <script dangerouslySetInnerHTML={{ __html: 'window.scrollTo(0,0)' }} />
       
       {/* Client-side touch to avoid server blocking */}
       {!isArchived && project.status !== 'exported' && <ProjectTouch projectId={id} />}

@@ -32,6 +32,7 @@ export function MasterChatIA({ projectId }: { projectId: string }) {
   const scrollLockRef = useRef(true);
   
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
   const helpRef = useRef<HTMLDivElement>(null);
   const helpBtnRef = useRef<HTMLButtonElement>(null);
   const selectorRef = useRef<HTMLDivElement>(null);
@@ -63,8 +64,13 @@ export function MasterChatIA({ projectId }: { projectId: string }) {
   }, [projectId]);
 
   const scrollToBottom = (behavior: ScrollBehavior = "smooth") => {
-    if (chatEndRef.current) {
-      chatEndRef.current.scrollIntoView({ behavior, block: "nearest" });
+    if (scrollRef.current) {
+      const targetScroll = scrollRef.current.scrollHeight;
+      if (behavior === "instant") {
+        scrollRef.current.scrollTop = targetScroll;
+      } else {
+        scrollRef.current.scrollTo({ top: targetScroll, behavior });
+      }
     }
   };
 
@@ -81,8 +87,8 @@ export function MasterChatIA({ projectId }: { projectId: string }) {
     
     if (data) {
       setMessages(data as Message[]);
-      // Forzar scroll instantáneo tras el render inicial del histórico
-      setTimeout(() => scrollToBottom("instant"), 100);
+      // Forzar scroll local instantáneo tras el render inicial del histórico
+      requestAnimationFrame(() => scrollToBottom("instant"));
     }
   };
 
@@ -193,10 +199,13 @@ export function MasterChatIA({ projectId }: { projectId: string }) {
       </div>
 
       {/* CHAT AREA */}
-      <div className={cn(
-        "flex-1 p-8 space-y-8 bg-white/50 scroll-smooth",
-        messages.length === 0 ? "overflow-hidden" : "overflow-y-auto"
-      )}>
+      <div 
+        ref={scrollRef}
+        className={cn(
+          "flex-1 p-8 space-y-8 bg-white/50 scroll-smooth",
+          messages.length === 0 ? "overflow-hidden" : "overflow-y-auto"
+        )}
+      >
         
         {messages.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center opacity-30 text-center px-10">
