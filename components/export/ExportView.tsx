@@ -292,8 +292,8 @@ export function ExportView({ project }: ExportViewProps) {
   };
 
   return (
-    <div className="max-w-5xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <header className="flex justify-between items-center">
+    <div className="max-w-7xl mx-auto h-[calc(100vh-6rem)] flex flex-col space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 overflow-hidden">
+      <header className="flex justify-between items-center shrink-0">
         <div className="flex items-center gap-4">
           <BackButton 
             variant="minimal" 
@@ -327,17 +327,17 @@ export function ExportView({ project }: ExportViewProps) {
         </div>
       </header>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-stretch">
-        <div className="lg:col-span-2 flex flex-col h-full">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-stretch flex-1 min-h-0">
+        <div className="lg:col-span-2 flex flex-col h-full min-h-0">
           {/* VISTA PREVIA */}
-          <div className="bg-white border border-slate-200 rounded-[3rem] p-10 shadow-sm flex-1 flex flex-col relative group overflow-hidden min-h-[70vh]">
+          <div className="bg-white border border-slate-200 rounded-[3rem] p-10 shadow-sm flex-1 flex flex-col relative group overflow-hidden min-h-0">
             <div className="absolute inset-0 rounded-[3rem] overflow-hidden pointer-events-none">
               <div className="absolute -right-10 -bottom-10 opacity-[0.02] group-hover:scale-110 transition-transform duration-1000">
                 <FileText size={400} />
               </div>
             </div>
 
-            <header className="flex justify-between items-center mb-10 relative z-10">
+            <header className="flex justify-between items-center mb-10 relative z-10 shrink-0">
               <div className="flex items-center gap-5">
                 <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center shadow-inner">
                   <Eye size={24} />
@@ -402,66 +402,68 @@ export function ExportView({ project }: ExportViewProps) {
           </div>
         </div>
 
-        <div className="lg:col-span-1 flex flex-col gap-6 h-full">
-          <div className="bg-slate-900 rounded-3xl p-8 text-white relative overflow-hidden flex-1 flex flex-col justify-center">
+        <div className="lg:col-span-1 flex flex-col gap-6 h-full min-h-0">
+          <div className="bg-slate-900 rounded-3xl p-8 text-white relative overflow-hidden flex flex-col justify-center flex-1 min-h-0">
             <div className="absolute top-0 right-0 p-4 opacity-10">
               <Sparkles size={120} />
             </div>
-            <h3 className="text-xl font-bold mb-2">
-              {maturity.label}
-            </h3>
-            {hasUnmarkedContent && (
-              <p className="text-amber-400 text-[10px] mb-2 font-bold uppercase tracking-wider animate-pulse">
-                ⚠️ Hay secciones sin revisar
-              </p>
-            )}
-            <p className="text-slate-400 text-sm mb-6 font-medium">
-              {progressPercent === 100 
-                ? "El expediente cumple con todos los estándares técnicos para su presentación oficial."
-                : `Faltan ${totalSections - completedSections} secciones por validar.`}
-            </p>
-            <div className="space-y-4 mb-8">
-              <div className="flex items-center gap-3 text-sm">
-                {totalSections > 0 ? (
-                  <CheckCircle2 size={18} className="text-emerald-400" />
-                ) : (
-                  <div className="w-[18px] h-[18px] rounded-full border border-slate-600" />
-                )}
-                <span>Estructura generada</span>
-              </div>
-              <div className="flex items-center gap-3 text-sm">
-                {progressPercent > 50 ? (
-                  <CheckCircle2 size={18} className="text-emerald-400" />
-                ) : (
-                  <div className="w-[18px] h-[18px] rounded-full border border-slate-600" />
-                )}
-                <span>Contenido avanzado</span>
-              </div>
-              <div className="flex items-center gap-3 text-sm">
-                {progressPercent === 100 ? (
-                  <CheckCircle2 size={18} className="text-emerald-400" />
-                ) : (
-                  <div className="w-[18px] h-[18px] rounded-full border border-slate-600" />
-                )}
-                <span>Requisitos verificados</span>
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={handleExportPdf}
-              disabled={isExporting || !hasContent}
-              className="w-full py-4 bg-blue-600 hover:bg-blue-500 rounded-2xl font-black text-sm transition-all shadow-lg shadow-blue-500/20 flex items-center justify-center gap-2 disabled:opacity-70"
-            >
-              {isExporting ? (
-                <Loader2 className="animate-spin" size={16} />
-              ) : (
-                <Zap fill="currentColor" size={16} />
+            <div className="overflow-y-auto pr-2 scrollbar-premium flex-1 flex flex-col justify-center">
+              <h3 className="text-xl font-bold mb-2">
+                {maturity.label}
+              </h3>
+              {hasUnmarkedContent && (
+                <p className="text-amber-400 text-[10px] mb-2 font-bold uppercase tracking-wider animate-pulse">
+                  ⚠️ Hay secciones sin revisar
+                </p>
               )}
-              {isExporting ? "Generando Archivos…" : "Finalizar y Descargar PDF"}
-            </button>
+              <p className="text-slate-400 text-sm mb-6 font-medium">
+                {progressPercent === 100 
+                  ? "El expediente cumple con todos los estándares técnicos para su presentación oficial."
+                  : `Faltan ${totalSections - completedSections} secciones por validar.`}
+              </p>
+              <div className="space-y-4 mb-8">
+                <div className="flex items-center gap-3 text-sm">
+                  {totalSections > 0 ? (
+                    <CheckCircle2 size={18} className="text-emerald-400" />
+                  ) : (
+                    <div className="w-[18px] h-[18px] rounded-full border border-slate-600" />
+                  )}
+                  <span>Estructura generada</span>
+                </div>
+                <div className="flex items-center gap-3 text-sm">
+                  {progressPercent > 50 ? (
+                    <CheckCircle2 size={18} className="text-emerald-400" />
+                  ) : (
+                    <div className="w-[18px] h-[18px] rounded-full border border-slate-600" />
+                  )}
+                  <span>Contenido avanzado</span>
+                </div>
+                <div className="flex items-center gap-3 text-sm">
+                  {progressPercent === 100 ? (
+                    <CheckCircle2 size={18} className="text-emerald-400" />
+                  ) : (
+                    <div className="w-[18px] h-[18px] rounded-full border border-slate-600" />
+                  )}
+                  <span>Requisitos verificados</span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={handleExportPdf}
+                disabled={isExporting || !hasContent}
+                className="w-full py-4 bg-blue-600 hover:bg-blue-500 rounded-2xl font-black text-sm transition-all shadow-lg shadow-blue-500/20 flex items-center justify-center gap-2 disabled:opacity-70"
+              >
+                {isExporting ? (
+                  <Loader2 className="animate-spin" size={16} />
+                ) : (
+                  <Zap fill="currentColor" size={16} />
+                )}
+                {isExporting ? "Generando Archivos…" : "Finalizar y Descargar PDF"}
+              </button>
+            </div>
           </div>
 
-          <div className="space-y-3">
+          <div className="space-y-3 flex-none">
             <ExportCard
               type=".docx"
               title="Microsoft Word"
