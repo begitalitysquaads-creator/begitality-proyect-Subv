@@ -292,7 +292,7 @@ export function ExportView({ project }: ExportViewProps) {
   };
 
   return (
-    <div className="max-w-7xl mx-auto h-[calc(100vh-6rem)] flex flex-col space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 overflow-hidden">
+    <div className="max-w-6xl mx-auto h-[calc(100vh-6rem)] flex flex-col space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 overflow-hidden">
       <header className="flex justify-between items-center shrink-0">
         <div className="flex items-center gap-4">
           <BackButton 
