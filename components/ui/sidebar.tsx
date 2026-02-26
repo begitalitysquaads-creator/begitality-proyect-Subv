@@ -6,26 +6,70 @@ import {
   LayoutDashboard,
   FileText,
   Briefcase,
+  Users,
+  User,
   Zap,
   LogOut,
+  Shield,
+  CalendarDays,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
-import * as Avatar from "@radix-ui/react-avatar";
+import { useState, useEffect } from "react";
 import * as Separator from "@radix-ui/react-separator";
 import * as ScrollArea from "@radix-ui/react-scroll-area";
 
 const navItems = [
   { href: "/dashboard", icon: LayoutDashboard, label: "Panel" },
+  { href: "/dashboard/calendar", icon: CalendarDays, label: "Calendario" },
   { href: "/dashboard/projects", icon: FileText, label: "Proyectos" },
+  { href: "/dashboard/clients", icon: Users, label: "Clientes" },
   { href: "/dashboard/history", icon: Briefcase, label: "Histórico" },
 ];
 
 export function AppSidebar() {
   const pathname = usePathname();
+  const [profile, setProfile] = useState<{ name: string, role: string } | null>(null);
+  const supabase = createClient();
+
+  useEffect(() => {
+    async function getProfile() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data } = await supabase
+        .from("profiles")
+        .select("full_name, role")
+        .eq("id", user.id)
+        .single();
+
+      if (data) {
+        setProfile({
+          name: data.full_name || "Consultor",
+          role: data.role || "junior_consultant"
+        });
+      }
+    }
+    getProfile();
+  }, [supabase]);
+
+  const roleLabels: Record<string, string> = {
+    admin: "Administrador",
+    senior_consultant: "Consultor Senior",
+    junior_consultant: "Consultor Junior",
+    auditor: "Auditor Técnico",
+    viewer: "Lector"
+  };
+
+  const roleProgress: Record<string, string> = {
+    admin: "w-full",
+    senior_consultant: "w-3/4",
+    junior_consultant: "w-1/4",
+    auditor: "w-1/2",
+    viewer: "w-[10%]"
+  };
 
   async function handleSignOut() {
-    const supabase = createClient();
     await supabase.auth.signOut();
     window.location.href = "/";
   }
@@ -39,7 +83,7 @@ export function AppSidebar() {
         >
           <Zap size={24} fill="currentColor" />
         </Link>
-        <span className="font-black text-2xl tracking-tighter text-slate-900">
+        <span className="font-black text-2xl tracking-tighter text-slate-900 uppercase">
           Begitality
         </span>
       </div>
@@ -72,14 +116,44 @@ export function AppSidebar() {
 
       <Separator.Root className="shrink-0 bg-slate-200 h-px" />
 
-      <div className="p-6">
+      <div className="p-6 space-y-2">
+        {profile?.role === 'admin' && (
+          <Link
+            href="/dashboard/admin"
+            className={cn(
+              "w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl transition-all font-bold text-sm mb-2",
+              pathname === "/dashboard/admin"
+                ? "bg-slate-900 text-white shadow-lg shadow-slate-900/20"
+                : "text-slate-400 hover:text-slate-900 hover:bg-slate-50"
+            )}
+          >
+            <Shield size={20} className={pathname === "/dashboard/admin" ? "text-blue-400" : ""} />
+            Administración
+          </Link>
+        )}
+
+        <Link
+          href="/dashboard/profile"
+          className={cn(
+            "w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl transition-all font-bold text-sm",
+            pathname === "/dashboard/profile"
+              ? "bg-blue-50 text-blue-600"
+              : "text-slate-400 hover:text-slate-900 hover:bg-slate-50"
+          )}
+        >
+          <User size={20} />
+          Mi Perfil
+        </Link>
+
         <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100">
           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">
-            Tu Plan
+            Rango Actual
           </p>
-          <p className="text-sm font-bold text-slate-900">Senior Consultant</p>
+          <p className="text-sm font-bold text-slate-900">
+            {profile ? roleLabels[profile.role] : "Cargando..."}
+          </p>
           <div className="mt-2 h-1 w-full bg-slate-200 rounded-full overflow-hidden">
-            <div className="h-full bg-blue-600 w-3/4 rounded-full" />
+            <div className={cn("h-full bg-blue-600 rounded-full transition-all duration-1000", profile ? roleProgress[profile.role] : "w-0")} />
           </div>
         </div>
         <button

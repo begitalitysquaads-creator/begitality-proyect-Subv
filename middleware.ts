@@ -27,11 +27,30 @@ export async function middleware(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
+  // ── ACTUALIZACIÓN DE ACTIVIDAD (last_login) ─────────────────────────
+  // Si el usuario está autenticado y no es una ruta de API/estática,
+  // actualizamos su último acceso de forma asíncrona (background).
+  if (user && !request.nextUrl.pathname.startsWith("/api/")) {
+    // Usamos el cliente de supabase para disparar el update
+    // No esperamos (await) para no bloquear la carga de la página
+    supabase
+      .from("profiles")
+      .update({ last_login: new Date().toISOString() })
+      .eq("id", user.id)
+      .then();
+  }
+
+  const userRole = user?.app_metadata?.role;
+
   const isAuthRoute =
     request.nextUrl.pathname.startsWith("/login") ||
-    request.nextUrl.pathname.startsWith("/signup");
+    request.nextUrl.pathname.startsWith("/forgot-password");
   const isPublicRoute =
-    request.nextUrl.pathname === "/" || isAuthRoute;
+    request.nextUrl.pathname === "/" ||
+    request.nextUrl.pathname.startsWith("/auth/callback") ||
+    request.nextUrl.pathname.startsWith("/api/auth/") ||
+    request.nextUrl.pathname.startsWith("/update-password") ||
+    isAuthRoute;
 
   if (!user && !isPublicRoute) {
     const redirect = new URL("/login", request.url);
@@ -40,6 +59,11 @@ export async function middleware(request: NextRequest) {
   }
 
   if (user && isAuthRoute) {
+    return NextResponse.redirect(new URL("/dashboard", request.url));
+  }
+
+  // ── PROTECCIÓN DE RUTAS POR ROL ─────────────────────────────────────
+  if (request.nextUrl.pathname.startsWith("/dashboard/admin") && userRole !== "admin") {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 

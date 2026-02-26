@@ -3,13 +3,41 @@
 @tailwind utilities;
 
 :root {
-  --begitality-primary: 37 99 235; /* blue-600 */
-  --begitality-muted: 248 250 252; /* slate-50 */
+  --begitality-primary: 37 99 235;
+  /* blue-600 */
+  --begitality-muted: 248 250 252;
+  /* slate-50 */
 }
 
 @layer base {
   body {
     @apply bg-[#F8FAFC] text-slate-900 antialiased selection:bg-blue-100;
+  }
+}
+
+/* Custom Scrollbars - Begitality Style */
+@layer base {
+  ::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-slate-200 rounded-full;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-slate-300;
+  }
+
+  /* Firefox support */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: #E2E8F0 transparent;
   }
 }
 
